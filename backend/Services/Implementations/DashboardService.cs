@@ -1,4 +1,5 @@
 ﻿using backend.Data;
+using backend.Helpers;
 using backend.DTO.Dashboard;
 using backend.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,7 @@ namespace backend.Service.Implementations
 
         public async Task<DashboardResponseDTO> GetDashboardAsync()
         {
-            var today = DateTime.UtcNow.Date;
+            var today = DateTimeHelper.Today;
 
         
             var totalRevenue = await _db.Reservations

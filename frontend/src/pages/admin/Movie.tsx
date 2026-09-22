@@ -127,8 +127,12 @@ const MoviePage: React.FC = () => {
       genres: record.genres,
       duration: record.duration,
       language: record.language,
-      releaseDate: moment(record.releaseDate, "DD/MM/YYYY"),
-      endDate: moment(record.endDate, "DD/MM/YYYY"),
+      releaseDate: record.releaseDateIso
+        ? moment(record.releaseDateIso, "YYYY-MM-DD")
+        : undefined,
+      endDate: record.endDateIso
+        ? moment(record.endDateIso, "YYYY-MM-DD")
+        : undefined,
       poster: record.poster,
       trailer: record.trailer ?? undefined,
       imdbId: record.imdbId ?? undefined,
@@ -145,8 +149,8 @@ const MoviePage: React.FC = () => {
       genres: record.genres,
       duration: record.duration,
       language: record.language,
-      releaseDate: moment(record.releaseDate, "DD/MM/YYYY"),
-      endDate: moment(record.endDate, "DD/MM/YYYY"),
+      releaseDate: record.releaseDate ?? "",
+      endDate: record.endDate ?? "",
       poster: record.poster,
       trailer: record.trailer ?? undefined,
       imdbId: record.imdbId ?? undefined,
@@ -176,10 +180,11 @@ const MoviePage: React.FC = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      const releaseIso = values.releaseDate.format("YYYY-MM-DDTHH:mm:ss");
+      // Gửi lên yyyy-MM-dd, backend tự chuẩn hoá và trả về dd/MM/yyyy.
+      const releaseIso = values.releaseDate.format("YYYY-MM-DD");
 
       const end = values.endDate;
-      const endIso = end ? end.format("YYYY-MM-DDTHH:mm:ss") : null;
+      const endIso = end ? end.format("YYYY-MM-DD") : null;
 
       const sanitizedGenres: string[] = (values.genres || []).map((g: any) =>
         normalizeGenre(String(g)),
@@ -737,30 +742,12 @@ const MoviePage: React.FC = () => {
                 </div>
               </Form.Item>
 
-              <Form.Item label="Ngày khởi chiếu">
-                <Input
-                  readOnly
-                  value={(() => {
-                    const rd = viewForm.getFieldValue("releaseDate");
-                    if (!rd) return "";
-                    return moment.isMoment(rd)
-                      ? rd.format("DD/MM/YYYY")
-                      : moment(rd).format("DD/MM/YYYY");
-                  })()}
-                />
-              </Form.Item>
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item label="Ngày khởi chiếu">
                     <Input
                       readOnly
-                      value={(() => {
-                        const rd = viewForm.getFieldValue("releaseDate");
-                        if (!rd) return "";
-                        return moment.isMoment(rd)
-                          ? rd.format("DD/MM/YYYY")
-                          : moment(rd).format("DD/MM/YYYY");
-                      })()}
+                      value={viewForm.getFieldValue("releaseDate") || ""}
                     />
                   </Form.Item>
                 </Col>
@@ -769,13 +756,7 @@ const MoviePage: React.FC = () => {
                     <Input
                       readOnly
                       placeholder="Chưa xác định"
-                      value={(() => {
-                        const ed = viewForm.getFieldValue("endDate");
-                        if (!ed) return "";
-                        return moment.isMoment(ed)
-                          ? ed.format("DD/MM/YYYY")
-                          : moment(ed).format("DD/MM/YYYY");
-                      })()}
+                      value={viewForm.getFieldValue("endDate") || ""}
                     />
                   </Form.Item>
                 </Col>

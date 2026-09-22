@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using backend.Helpers;
 
 namespace backend.Model
 {
@@ -15,7 +16,7 @@ namespace backend.Model
         public long ShowtimeId { get; set; }
 
         [Column("reservation_time")]
-        public DateTime ReservationTime { get; set; } = DateTime.UtcNow;
+        public DateTime ReservationTime { get; set; } = DateTimeHelper.Now;
 
         [Column("status_id")]
         public int StatusId { get; set; } = 1;

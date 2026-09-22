@@ -1,4 +1,5 @@
 ﻿using backend.Model;
+using backend.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -96,7 +97,7 @@ namespace backend.Data
         }
         private void UpdateTimestamps()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTimeHelper.Now;
             var entries = ChangeTracker.Entries()
                 .Where(e => e.Entity is AbstractMappedEntity && (e.State == EntityState.Added || e.State == EntityState.Modified));
 

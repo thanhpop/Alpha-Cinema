@@ -46,8 +46,8 @@ namespace backend.Services.Implementations
             existing.genres = dto.Genres ?? new List<string>();
             existing.duration = dto.Duration;
             existing.language = dto.Language;
-            existing.releaseDate = dto.ReleaseDate;
-            existing.endDate = dto.EndDate;
+            existing.releaseDate = dto.ReleaseDate.Date;
+            existing.endDate = dto.EndDate?.Date;
             existing.imdbId = dto.ImdbId;
             existing.filmId = dto.FilmId;
             existing.trailer = dto.Trailer;
@@ -78,6 +78,8 @@ namespace backend.Services.Implementations
                 Language = m.language,
                 ReleaseDate = m.releaseDate,
                 EndDate = m.endDate,
+                CreatedAt = m.CreatedAt,
+                UpdatedAt = m.UpdatedAt,
                 ImdbId = m.imdbId,
                 FilmId = m.filmId,
                 Trailer = m.trailer
@@ -94,8 +96,8 @@ namespace backend.Services.Implementations
                 genres = dto.Genres ?? new List<string>(),
                 duration = dto.Duration,
                 language = dto.Language,
-                releaseDate = dto.ReleaseDate,
-                endDate = dto.EndDate,
+                releaseDate = dto.ReleaseDate.Date,
+                endDate = dto.EndDate?.Date,
                 imdbId = dto.ImdbId,
                 filmId = dto.FilmId,
                 trailer = dto.Trailer

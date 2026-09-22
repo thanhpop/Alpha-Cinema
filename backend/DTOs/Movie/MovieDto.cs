@@ -1,4 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using backend.Helpers;
+using backend.Helpers.Json;
 using backend.Model;
 
 namespace backend.DTO.Movie
@@ -23,10 +26,16 @@ namespace backend.DTO.Movie
         public string? Language { get; set; }
 
         [Required(ErrorMessage = "Release date is required.")]
-        [DataType(DataType.Date)]
+        [JsonConverter(typeof(VnDateJsonConverter))]
         public DateTime ReleaseDate { get; set; }
 
+        [JsonConverter(typeof(VnNullableDateJsonConverter))]
         public DateTime? EndDate { get; set; }
+
+      
+        public string ReleaseDateIso => DateTimeHelper.FormatIsoDate(ReleaseDate);
+
+        public string? EndDateIso => DateTimeHelper.FormatIsoDate(EndDate);
 
         [Required(ErrorMessage = "IMDB id is required.")]
         public string ImdbId { get; set; } = null!;

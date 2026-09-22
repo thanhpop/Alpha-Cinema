@@ -45,6 +45,17 @@ interface UISchedule {
   theaters: UITheater[];
 }
 
+/**
+ * Đổi một Date của trình duyệt sang khoá yyyy-MM-dd theo giờ địa phương,
+ * trùng định dạng showDateIso mà backend trả về.
+ */
+const toDateKey = (d: Date): string => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 const MovieDetailPage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -83,11 +94,12 @@ const MovieDetailPage: React.FC = () => {
         const endDate = new Date(today);
         endDate.setDate(today.getDate() + 6);
 
-        const filteredShowtimes = showtimesData.filter((st) => {
-          const showDate = new Date(st.showDate);
-          showDate.setHours(0, 0, 0, 0);
-          return showDate >= today && showDate <= endDate;
-        });
+        // showDateIso (yyyy-MM-dd) do backend trả về, so sánh chuỗi là đủ và không lệch múi giờ.
+        const startKey = toDateKey(today);
+        const endKey = toDateKey(endDate);
+        const filteredShowtimes = showtimesData.filter(
+          (st) => st.showDateIso >= startKey && st.showDateIso <= endKey,
+        );
 
         const processedData = processShowtimesToSchedule(
           filteredShowtimes,
@@ -125,11 +137,7 @@ const MovieDetailPage: React.FC = () => {
     for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-
-      days.push(`${yyyy}-${mm}-${dd}`);
+      days.push(toDateKey(d));
     }
 
     return days;
@@ -165,18 +173,14 @@ const MovieDetailPage: React.FC = () => {
 
     const showtimeMap: Record<string, Showtime[]> = {};
     showtimes.forEach((st) => {
-      const dateKey = st.showDate.split("T")[0];
+      const dateKey = st.showDateIso;
       if (!showtimeMap[dateKey]) showtimeMap[dateKey] = [];
       showtimeMap[dateKey].push(st);
     });
 
     return days.map((dateKey) => {
-      const dateObj = new Date(dateKey);
-      const displayDate = `${dateObj.getDate().toString().padStart(2, "0")}/${(
-        dateObj.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "0")}`;
+      const [, month, day] = dateKey.split("-");
+      const displayDate = `${day}/${month}`;
 
       const theaterMap: Record<number, UITheater> = {};
 

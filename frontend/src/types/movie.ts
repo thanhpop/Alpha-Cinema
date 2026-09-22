@@ -6,8 +6,10 @@ export interface Movie {
     duration: number;
     language?: string;
     releaseDate?: string;
+    releaseDateIso?: string;
     poster?: string;
     endDate?: string;
+    endDateIso?: string;
     imdbId?: string;
     filmId?: string;
     trailer?: string;

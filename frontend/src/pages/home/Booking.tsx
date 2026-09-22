@@ -602,10 +602,7 @@ const BookingPage: React.FC = () => {
                         {showtime?.showTime}
                       </span>
                       <span className="text-gray-500 text-xs">
-                        {showtime?.showDate &&
-                          new Date(showtime.showDate).toLocaleDateString(
-                            "vi-VN",
-                          )}
+                        {showtime?.showDate}
                       </span>
                     </div>
                   </div>

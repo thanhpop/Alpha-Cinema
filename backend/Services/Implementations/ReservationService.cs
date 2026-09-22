@@ -1,5 +1,7 @@
 ﻿using backend.Data;
+using backend.Helpers;
 using backend.DTO.Reservation;
+using backend.DTO.Seat;
 using backend.Model;
 using backend.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +39,10 @@ namespace backend.Service.Implementations
                    UserId = r.UserId,
                    ShowtimeId = r.ShowtimeId,
                    ReservationTime = r.ReservationTime,
+                   ShowDate = r.Showtime.ShowDate,
+                   ShowTimeValue = r.Showtime.ShowTime,
+                   MovieName = r.Showtime.Movie.title,
+                   TheaterName = r.Showtime.Theater.name,
                    StatusId = r.StatusId,
                    StatusValue = MapStatus(r.StatusId),
                    TotalPrice = r.TotalPrice,
@@ -61,6 +67,10 @@ namespace backend.Service.Implementations
             UserId = r.UserId,
             ShowtimeId = r.ShowtimeId,
             ReservationTime = r.ReservationTime,
+            ShowDate = r.Showtime.ShowDate,
+            ShowTimeValue = r.Showtime.ShowTime,
+            MovieName = r.Showtime.Movie.title,
+            TheaterName = r.Showtime.Theater.name,
             StatusId = r.StatusId,
             StatusValue = MapStatus(r.StatusId),
             TotalPrice = r.TotalPrice,
@@ -133,7 +143,7 @@ namespace backend.Service.Implementations
                 Id = GenerateHexId(),
                 UserId = dto.UserId,
                 ShowtimeId = dto.ShowtimeId,
-                ReservationTime = DateTime.Now,
+                ReservationTime = DateTimeHelper.Now,
                 StatusId = 1, 
                 TotalPrice = showtime.Price * seats.Count,
                 Paid = false
@@ -161,6 +171,8 @@ namespace backend.Service.Implementations
                 UserId = reservation.UserId,
                 ShowtimeId = reservation.ShowtimeId,
                 ReservationTime = reservation.ReservationTime,
+                ShowDate = showtime.ShowDate,
+                ShowTimeValue = showtime.ShowTime,
                 StatusId = reservation.StatusId,
                 StatusValue = MapStatus(reservation.StatusId),
                 TotalPrice = reservation.TotalPrice,
@@ -280,12 +292,14 @@ namespace backend.Service.Implementations
                     UserId = r.UserId,
                     ShowtimeId = r.ShowtimeId,
                     ReservationTime = r.ReservationTime,
+                    ShowDate = r.Showtime.ShowDate,
+                    ShowTimeValue = r.Showtime.ShowTime,
+                    MovieName = r.Showtime.Movie.title,
+                    TheaterName = r.Showtime.Theater.name,
                     StatusId = r.StatusId,
                     StatusValue = MapStatus(r.StatusId),
                     TotalPrice = r.TotalPrice,
                     Paid = r.Paid,
-                    MovieName = r.Showtime.Movie.title,
-                    TheaterName = r.Showtime.Theater.name,
                     Seats = r.Seats.Select(s => new SeatDto
                     {
                         Id = s.Id,

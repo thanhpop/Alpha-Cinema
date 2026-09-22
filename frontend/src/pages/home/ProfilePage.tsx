@@ -107,8 +107,9 @@ const ProfilePage: React.FC = () => {
     return reservations.map((r) => ({
       key: r.id,
       movieName: r.movieName,
-      bookingDate: new Date(r.reservationTime).toLocaleString("vi-VN"),
-      showDate: new Date(r.reservationTime).toLocaleString("vi-VN"),
+      // Backend đã format sẵn, chỉ hiển thị.
+      bookingDate: r.reservationTime,
+      showDate: r.showDateTimeText ?? "-",
       theater: r.theaterName,
       seats: r.seats?.map((s) => s.seatNumber).join(", ") || "",
       total: r.totalPrice,

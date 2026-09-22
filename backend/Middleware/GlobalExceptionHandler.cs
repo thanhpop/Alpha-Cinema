@@ -16,7 +16,6 @@ namespace backend.Middleware
         }
         public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
         {
-            _logger.LogError(exception, "Exception occurred: {Message}", exception.Message);
 
             var status = StatusCodes.Status500InternalServerError;
             var title = "An error occurred.";

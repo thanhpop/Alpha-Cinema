@@ -1,4 +1,5 @@
 ﻿using backend.Libraries;
+using backend.Helpers;
 using backend.Model.Vnpay;
 
 namespace backend.Service.Vnpay
@@ -12,8 +13,7 @@ namespace backend.Service.Vnpay
         }
         public string CreatePaymentUrl(PaymentInformationModel model, HttpContext context)
         {
-            var timeZoneById = TimeZoneInfo.FindSystemTimeZoneById(_configuration["TimeZoneId"]);
-            var timeNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneById);
+            var timeNow = DateTimeHelper.Now;
 
             var pay = new VnPayLibrary();
             var urlCallBack = Environment.GetEnvironmentVariable("VNPAY_RETURN_URL");

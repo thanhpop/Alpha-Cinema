@@ -1,4 +1,5 @@
 ﻿using backend.DTO.Dashboard;
+using backend.Helpers;
 using backend.Service.Interfaces;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -34,7 +35,7 @@ namespace backend.Service.Implementations
 
                              col.Item().AlignRight().Text(txt =>
                              {
-                                 txt.Span($"Ngày xuất báo cáo: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                                 txt.Span($"Ngày xuất báo cáo: {DateTimeHelper.Now:dd/MM/yyyy HH:mm}")
                                     .Italic().FontSize(9).FontColor(QuestPDF.Helpers.Colors.White);
                              });
                          });
@@ -100,7 +101,7 @@ namespace backend.Service.Implementations
                         {
                             footCol.Item().BorderTop(1).BorderColor(QuestPDF.Helpers.Colors.Grey.Lighten2).PaddingTop(10).Row(row =>
                             {
-                                row.RelativeItem().Text($"© {DateTime.Now.Year} Alpha Cinema Management System")
+                                row.RelativeItem().Text($"© {DateTimeHelper.Now.Year} Alpha Cinema Management System")
                                     .FontSize(9).FontColor(QuestPDF.Helpers.Colors.Grey.Medium);
 
                                 row.RelativeItem().AlignRight().Text(x =>

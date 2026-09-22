@@ -1,4 +1,5 @@
 ﻿using backend.DTO.Dashboard;
+using backend.Helpers;
 using backend.Service.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +27,7 @@ namespace backend.Controller
 
                 byte[] pdfBytes = _dashboardReportService.ExportDashboardToPdf(data);
 
-                string fileName = $"Bao-cao-doanh-thu-{DateTime.Now:yyyyMMddHHmm}.pdf";
+                string fileName = $"Bao-cao-doanh-thu-{DateTimeHelper.Now:yyyyMMddHHmm}.pdf";
                 return File(pdfBytes, "application/pdf", fileName);
             }
             catch (Exception ex)

@@ -12,7 +12,9 @@ export interface Showtime {
   movieId: number;
   theaterId: number;
   showDate: string;
+  showDateIso: string;
   showTime: string;
+  showDateTimeText: string;
   price: number;
   totalSeats: number;
   availableSeats: number;
@@ -25,7 +27,9 @@ function toShowtime(s: any): Showtime {
     movieId: Number(s.movieId),
     theaterId: Number(s.theaterId),
     showDate: String(s.showDate ?? ""),
+    showDateIso: String(s.showDateIso ?? ""),
     showTime: String(s.showTime ?? ""),
+    showDateTimeText: String(s.showDateTimeText ?? ""),
     price: Number(s.price),
     totalSeats: Number(s.totalSeats),
     availableSeats: Number(s.availableSeats),
@@ -54,7 +58,7 @@ export const showtimeService = {
     return toShowtime(res.data.data);
   },
 
-  async create(payload: Omit<Showtime, "id">): Promise<Showtime> {
+  async create(payload: Partial<Showtime>): Promise<Showtime> {
     const res = await instance.post("/showtimes", payload);
     if (!res.data?.data) throw new Error("Create failed");
     return toShowtime(res.data.data);

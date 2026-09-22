@@ -1,6 +1,8 @@
 ﻿
 using backend.Data;
+using backend.Helpers;
 using backend.DTO;
+using backend.DTO.Seat;
 using backend.DTO.Showtime;
 using backend.Model;
 using backend.Service.Interfaces;
@@ -38,7 +40,7 @@ namespace backend.Services.Implementations
                 MovieId = s.MovieId,
                 TheaterId = s.TheaterId,
                 ShowDate = s.ShowDate,
-                ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                ShowTimeValue = s.ShowTime,
                 Price = s.Price,
                 TotalSeats = s.TotalSeats,
                 AvailableSeats = s.AvailableSeats,
@@ -68,7 +70,7 @@ namespace backend.Services.Implementations
                 MovieId = s.MovieId,
                 TheaterId = s.TheaterId,
                 ShowDate = s.ShowDate,
-                ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                ShowTimeValue = s.ShowTime,
                 Price = s.Price,
                 TotalSeats = s.TotalSeats,
                 AvailableSeats = s.AvailableSeats,
@@ -95,7 +97,7 @@ namespace backend.Services.Implementations
                 MovieId = s.MovieId,
                 TheaterId = s.TheaterId,
                 ShowDate = s.ShowDate,
-                ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                ShowTimeValue = s.ShowTime,
                 Price = s.Price,
                 TotalSeats = s.TotalSeats,
                 AvailableSeats = s.AvailableSeats,
@@ -122,7 +124,7 @@ namespace backend.Services.Implementations
                 MovieId = s.MovieId,
                 TheaterId = s.TheaterId,
                 ShowDate = s.ShowDate,
-                ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                ShowTimeValue = s.ShowTime,
                 Price = s.Price,
                 TotalSeats = s.TotalSeats,
                 AvailableSeats = s.AvailableSeats,
@@ -151,7 +153,7 @@ namespace backend.Services.Implementations
                 MovieId = s.MovieId,
                 TheaterId = s.TheaterId,
                 ShowDate = s.ShowDate,
-                ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                ShowTimeValue = s.ShowTime,
                 Price = s.Price,
                 TotalSeats = s.TotalSeats,
                 AvailableSeats = s.AvailableSeats,
@@ -167,7 +169,7 @@ namespace backend.Services.Implementations
 
         public async Task<IEnumerable<ShowtimeDto>> GetAvailableShowtimesAsync(DateTime? fromDate = null)
         {
-            var now = DateTime.Now;
+            var now = DateTimeHelper.Now;
             var today = now.Date;
 
             var cutoffTime = now.TimeOfDay.Add(TimeSpan.FromMinutes(15));
@@ -191,7 +193,7 @@ namespace backend.Services.Implementations
                     MovieId = s.MovieId,
                     TheaterId = s.TheaterId,
                     ShowDate = s.ShowDate,
-                    ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                    ShowTimeValue = s.ShowTime,
                     Price = s.Price,
                     TotalSeats = s.TotalSeats,
                     AvailableSeats = s.AvailableSeats
@@ -203,7 +205,7 @@ namespace backend.Services.Implementations
 
         public async Task<IEnumerable<ShowtimeDto>> GetAvailableShowtimesForMovieAsync(long movieId, DateTime? fromDate = null)
         {
-            var date = (fromDate ?? DateTime.Today).Date;
+            var date = (fromDate ?? DateTimeHelper.Today).Date;
 
             var list = await _db.Showtimes
                 .AsNoTracking()
@@ -215,7 +217,7 @@ namespace backend.Services.Implementations
                     MovieId = s.MovieId,
                     TheaterId = s.TheaterId,
                     ShowDate = s.ShowDate,
-                    ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                    ShowTimeValue = s.ShowTime,
                     Price = s.Price,
                     TotalSeats = s.TotalSeats,
                     AvailableSeats = s.AvailableSeats,
@@ -228,7 +230,7 @@ namespace backend.Services.Implementations
 
         public async Task<IEnumerable<ShowtimeDto>> GetUpcomingShowtimesAsync()
         {
-            var fromDate = DateTime.Today.AddDays(8);
+            var fromDate = DateTimeHelper.Today.AddDays(8);
 
             var list = await _db.Showtimes
                 .AsNoTracking()
@@ -241,7 +243,7 @@ namespace backend.Services.Implementations
                     MovieId = s.MovieId,
                     TheaterId = s.TheaterId,
                     ShowDate = s.ShowDate,
-                    ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                    ShowTimeValue = s.ShowTime,
                     Price = s.Price,
                     TotalSeats = s.TotalSeats,
                     AvailableSeats = s.AvailableSeats
@@ -252,7 +254,7 @@ namespace backend.Services.Implementations
         }
         public async Task<IEnumerable<ShowtimeDto>> GetUpcomingShowtimesByMovieAsync(long movieId)
         {
-            var now = DateTime.Now;
+            var now = DateTimeHelper.Now;
             var today = now.Date;
             var currentTime = now.TimeOfDay;
 
@@ -273,7 +275,7 @@ namespace backend.Services.Implementations
                     MovieId = s.MovieId,
                     TheaterId = s.TheaterId,
                     ShowDate = s.ShowDate,
-                    ShowTime = s.ShowTime.ToString(@"hh\:mm"),
+                    ShowTimeValue = s.ShowTime,
                     Price = s.Price,
                     TotalSeats = s.TotalSeats,
                     AvailableSeats = s.AvailableSeats
@@ -297,11 +299,7 @@ namespace backend.Services.Implementations
             }
 
 
-            if (!TimeSpan.TryParseExact(dto.ShowTime, "hh\\:mm", CultureInfo.InvariantCulture, out var time))
-            {
-                if (!TimeSpan.TryParse(dto.ShowTime, out time))
-                    throw new ArgumentException("ShowTime must be in HH:mm format.");
-            }
+            var time = DateTimeHelper.ParseTimeOrThrow(dto.ShowTime, "ShowTime");
 
             var entity = new Showtime
             {
@@ -336,7 +334,7 @@ namespace backend.Services.Implementations
                 MovieId = entity.MovieId,
                 TheaterId = entity.TheaterId,
                 ShowDate = entity.ShowDate,
-                ShowTime = entity.ShowTime.ToString(@"hh\:mm"),
+                ShowTimeValue = entity.ShowTime,
                 Price = entity.Price,
                 TotalSeats = entity.TotalSeats,
                 AvailableSeats = entity.AvailableSeats,
@@ -364,13 +362,7 @@ namespace backend.Services.Implementations
                 throw new KeyNotFoundException($"Theater {dto.TheaterId} not found.");
             }
 
-            if (!TimeSpan.TryParseExact(dto.ShowTime, "hh\\:mm", System.Globalization.CultureInfo.InvariantCulture, out var parsedTime))
-            {
-                if (!TimeSpan.TryParse(dto.ShowTime, out parsedTime))
-                {
-                    throw new ArgumentException("ShowTime must be in HH:mm format.");
-                }
-            }
+            var parsedTime = DateTimeHelper.ParseTimeOrThrow(dto.ShowTime, "ShowTime");
 
             if (existing == null)
             {
@@ -391,7 +383,7 @@ namespace backend.Services.Implementations
                 MovieId = existing.MovieId,
                 TheaterId = existing.TheaterId,
                 ShowDate = existing.ShowDate,
-                ShowTime = existing.ShowTime.ToString(@"hh\:mm"),
+                ShowTimeValue = existing.ShowTime,
                 Price = existing.Price,
                 TotalSeats = existing.TotalSeats,
                 AvailableSeats = existing.AvailableSeats,

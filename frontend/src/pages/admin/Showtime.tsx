@@ -93,6 +93,7 @@ const AdminShowtimeHookPage: React.FC = () => {
         String(s.movieId).includes(q) ||
         String(s.theaterId).includes(q) ||
         s.showDate.toLowerCase().includes(q) ||
+        s.showDateIso.toLowerCase().includes(q) ||
         s.showTime.toLowerCase().includes(q)
       );
     });
@@ -110,7 +111,7 @@ const AdminShowtimeHookPage: React.FC = () => {
     form.setFieldsValue({
       movieId: record.movieId,
       theaterId: record.theaterId,
-      showDate: dayjs(record.showDate),
+      showDate: dayjs(record.showDateIso, "YYYY-MM-DD"),
       showTime: dayjs(record.showTime, "HH:mm"),
       price: record.price,
       totalSeats: record.totalSeats,
@@ -218,9 +219,9 @@ const AdminShowtimeHookPage: React.FC = () => {
       render: (id) => theaters.find((t) => t.id === id)?.name || id,
     },
     {
+      // Backend đã trả về dd/MM/yyyy, chỉ hiển thị.
       title: "Ngày chiếu",
       dataIndex: "showDate",
-      render: (val) => dayjs(val).format("YYYY-MM-DD"),
     },
     { title: "Giờ chiếu", dataIndex: "showTime" },
     {

@@ -19,6 +19,11 @@ export interface ReservationResponse {
   userId: number;
   showtimeId: number;
   reservationTime: string;
+  reservationTimeIso: string;
+  showDate: string | null;
+  showDateIso: string | null;
+  showTime: string | null;
+  showDateTimeText: string | null;
   statusId: number;
   statusValue: string;
   totalPrice: number;

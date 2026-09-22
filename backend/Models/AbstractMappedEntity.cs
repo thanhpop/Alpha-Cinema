@@ -1,29 +1,33 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using backend.Helpers;
+using backend.Helpers.Json;
 
 namespace backend.Model
 {
     public abstract class AbstractMappedEntity
     {
         [Column("created_at")]
-        [JsonPropertyName("createdAt")] 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        [JsonPropertyName("createdAt")]
+        [JsonConverter(typeof(VnDateTimeJsonConverter))]
+        public DateTime CreatedAt { get; set; } = DateTimeHelper.Now;
 
         [Column("updated_at")]
         [JsonPropertyName("updatedAt")]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        [JsonConverter(typeof(VnDateTimeJsonConverter))]
+        public DateTime UpdatedAt { get; set; } = DateTimeHelper.Now;
 
         public void MarkCreated()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTimeHelper.Now;
             CreatedAt = now;
             UpdatedAt = now;
         }
 
         public void MarkUpdated()
         {
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = DateTimeHelper.Now;
         }
     }
 }

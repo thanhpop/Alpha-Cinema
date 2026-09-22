@@ -56,7 +56,7 @@ export default function ReservationPage() {
   };
   const filteredData = data.filter((item) => {
     if (dateRange) {
-      const reservationDate = dayjs(item.reservationTime);
+      const reservationDate = dayjs(item.reservationTimeIso);
       if (
         reservationDate.isBefore(dateRange[0].startOf("day")) ||
         reservationDate.isAfter(dateRange[1].endOf("day"))
@@ -105,7 +105,7 @@ export default function ReservationPage() {
       dataIndex: "reservationTime",
       key: "reservationTime",
       width: 180,
-      render: (value: string) => new Date(value).toLocaleString("vi-VN"),
+      // Backend đã trả về dd/MM/yyyy HH:mm, chỉ hiển thị.
     },
     {
       title: "Trạng thái",
@@ -242,9 +242,11 @@ export default function ReservationPage() {
             </Descriptions.Item>
 
             <Descriptions.Item label="Thời gian đặt">
-              {dayjs(selectedReservation.reservationTime).format(
-                "DD/MM/YYYY HH:mm:ss",
-              )}
+              {selectedReservation.reservationTime}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Suất chiếu">
+              {selectedReservation.showDateTimeText ?? "-"}
             </Descriptions.Item>
 
             <Descriptions.Item label="Trạng thái">

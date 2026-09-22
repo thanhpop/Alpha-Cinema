@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using backend.Helpers;
 
 namespace backend.Model
 {
@@ -23,7 +24,7 @@ namespace backend.Model
         public string Category { get; set; } = null!;
 
         [Column("created_at")]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTimeHelper.Now;
 
         [Column("is_active")]
         public bool IsActive { get; set; } = true;

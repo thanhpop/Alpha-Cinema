@@ -49,7 +49,7 @@ const ArticleCard: React.FC<{ item: Article }> = ({ item }) => {
 
         <div className="text-xs text-gray-400 mb-3">
           <CalendarOutlined className="mr-1" />
-          {new Date(item.createdAt).toLocaleDateString("vi-VN")}
+          {item.createdAt}
         </div>
 
         <Paragraph className="text-gray-500 text-sm line-clamp-3 flex-grow">

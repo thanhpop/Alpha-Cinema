@@ -1,4 +1,3 @@
-
 export interface Seat {
   id: number;
   showtimeId: number;
@@ -10,12 +9,14 @@ export interface Showtime {
   id: number;
   movieId: number;
   theaterId: number;
-  showDate: string; 
-  showTime: string; 
+  showDate: string;
+  showDateIso: string;
+  showTime: string;
+  showDateTimeText: string;
   price: number;
   totalSeats: number;
   availableSeats: number;
-  seats?: Seat[]; 
+  seats?: Seat[];
 }
 
 export interface ApiResponse<T> {

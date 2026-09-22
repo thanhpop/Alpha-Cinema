@@ -65,7 +65,7 @@ namespace backend.Controllers
         [HttpGet("available")]
         public async Task<IActionResult> GetAvailable([FromQuery] DateTime? date)
         {
-            var searchDate = (date ?? DateTime.Today).Date;
+            var searchDate = (date ?? DateTimeHelper.Today).Date;
             var items = await _service.GetAvailableShowtimesAsync(searchDate);
             return Ok(new ApiResponse<IEnumerable<ShowtimeDto>>(200, "Success", items));
         }
@@ -75,7 +75,7 @@ namespace backend.Controllers
         //[Authorize]
         public async Task<IActionResult> GetAvailableForMovie([FromRoute] long movieId, [FromQuery] DateTime? date)
         {
-            var searchDate = (date ?? DateTime.Today).Date;
+            var searchDate = (date ?? DateTimeHelper.Today).Date;
             var items = await _service.GetAvailableShowtimesForMovieAsync(movieId, searchDate);
             return Ok(new ApiResponse<IEnumerable<ShowtimeDto>>(200, "Success", items));
         }
