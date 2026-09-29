@@ -27,7 +27,11 @@ import type { TabsProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import { reservationService } from "@/services/reservationService";
-import type { ReservationResponse } from "@/services/reservationService";
+import type {
+  ReservationResponse,
+  UserReservationSummary,
+} from "@/services/reservationService";
+import { usePagedList } from "@/hooks/usePagedList";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -55,9 +59,26 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [bookingHistory, setBookingHistory] = useState<BookingHistory[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [reservations, setReservations] = useState<ReservationResponse[]>([]);
+  const {
+    items: reservations,
+    loading: historyLoading,
+    pagination,
+  } = usePagedList(reservationService.getMyReservations, {
+    initialFilters: {},
+    initialPageSize: 5,
+    onError: () => message.error("Không thể tải lịch sử đặt vé"),
+  });
+  const [summary, setSummary] = useState<UserReservationSummary>({
+    totalTickets: 0,
+    totalSpent: 0,
+  });
+
+  useEffect(() => {
+    reservationService
+      .getMySummary()
+      .then(setSummary)
+      .catch(() => message.error("Không thể tải thống kê đặt vé"));
+  }, []);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -72,20 +93,6 @@ const ProfilePage: React.FC = () => {
       fullName: parsedUser.fullName || "",
       phone: parsedUser.phone || "",
     });
-
-    setHistoryLoading(true);
-    reservationService
-      .getReservationsByUserId(parsedUser.userId)
-      .then((res) => {
-        setReservations(res);
-        setBookingHistory(mapReservationToHistory(res));
-      })
-      .catch(() => {
-        message.error("Không thể tải lịch sử đặt vé");
-      })
-      .finally(() => {
-        setHistoryLoading(false);
-      });
   }, [navigate]);
 
   const onFinishUpdateProfile = (values: any) => {
@@ -121,12 +128,8 @@ const ProfilePage: React.FC = () => {
             : "cancelled",
     }));
   };
-  const totalTickets = reservations
-    .filter((r) => r.statusValue === "CONFIRMED")
-    .reduce((sum, r) => sum + (r.seats?.length || 0), 0);
-  const totalSpent = reservations
-    .filter((r) => r.statusValue === "CONFIRMED")
-    .reduce((sum, r) => sum + r.totalPrice, 0);
+  const bookingHistory = mapReservationToHistory(reservations);
+  const { totalTickets, totalSpent } = summary;
 
   const columns: ColumnsType<BookingHistory> = [
     {
@@ -241,7 +244,7 @@ const ProfilePage: React.FC = () => {
           columns={columns}
           dataSource={bookingHistory}
           loading={historyLoading}
-          pagination={{ pageSize: 5 }}
+          pagination={pagination}
         />
       ),
     },

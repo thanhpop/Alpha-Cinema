@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 
 interface StoredUser {
   userId: number;
@@ -19,14 +19,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<StoredUser | null>(null);
-
-  useEffect(() => {
+  // Đọc ngay khi khởi tạo để guard route không redirect nhầm lúc F5
+  const [user, setUser] = useState<StoredUser | null>(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
   const login = (userData: StoredUser) => {
     localStorage.setItem("user", JSON.stringify(userData));

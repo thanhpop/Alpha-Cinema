@@ -15,72 +15,60 @@ import {
 import { EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { reservationService } from "@/services/reservationService";
-import type { ReservationResponse } from "@/services/reservationService";
+import type {
+  ReservationFilters,
+  ReservationResponse,
+} from "@/services/reservationService";
+import { usePagedList } from "@/hooks/usePagedList";
 
 import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
+const initialFilters: ReservationFilters = {
+  fromDate: undefined,
+  toDate: undefined,
+  minPrice: null,
+  maxPrice: null,
+  status: null,
+  paid: null,
+};
+
 export default function ReservationPage() {
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ReservationResponse[]>([]);
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const { items, loading, setFilters, pagination } = usePagedList(
+    reservationService.getPaged,
+    {
+      initialFilters,
+      onError: (err) => {
+        console.error(err);
+        message.error("Không thể tải danh sách reservation");
+      },
+    },
+  );
   const [priceRange, setPriceRange] = useState<[number | null, number | null]>([
     null,
     null,
   ]);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [paidFilter, setPaidFilter] = useState<boolean | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedReservation, setSelectedReservation] =
     useState<ReservationResponse | null>(null);
 
+  // Đợi người dùng gõ xong giá rồi mới gọi API
   useEffect(() => {
-    fetchReservations();
-  }, []);
+    const timer = setTimeout(
+      () => setFilters({ minPrice: priceRange[0], maxPrice: priceRange[1] }),
+      400,
+    );
+    return () => clearTimeout(timer);
+  }, [priceRange, setFilters]);
 
-  const fetchReservations = async () => {
-    try {
-      setLoading(true);
-      const res = await reservationService.getAllReservations();
-      console.log("RESERVATIONS:", res);
-      setData(res);
-    } catch (err) {
-      console.error(err);
-      message.error("Không thể tải danh sách reservation");
-    } finally {
-      setLoading(false);
-    }
+  const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    setFilters({
+      fromDate: dates?.[0]?.format("YYYY-MM-DD"),
+      toDate: dates?.[1]?.format("YYYY-MM-DD"),
+    });
   };
-  const filteredData = data.filter((item) => {
-    if (dateRange) {
-      const reservationDate = dayjs(item.reservationTimeIso);
-      if (
-        reservationDate.isBefore(dateRange[0].startOf("day")) ||
-        reservationDate.isAfter(dateRange[1].endOf("day"))
-      ) {
-        return false;
-      }
-    }
-
-    if (priceRange[0] !== null && item.totalPrice < priceRange[0]) {
-      return false;
-    }
-
-    if (priceRange[1] !== null && item.totalPrice > priceRange[1]) {
-      return false;
-    }
-    if (statusFilter && item.statusValue !== statusFilter) {
-      return false;
-    }
-    if (paidFilter !== null && item.paid !== paidFilter) {
-      return false;
-    }
-
-    return true;
-  });
 
   const handleViewDetail = (record: ReservationResponse) => {
     setSelectedReservation(record);
@@ -165,7 +153,7 @@ export default function ReservationPage() {
       <Space style={{ marginBottom: 16 }}>
         <RangePicker
           format="DD/MM/YYYY"
-          onChange={(dates) => setDateRange(dates as [Dayjs, Dayjs] | null)}
+          onChange={handleDateRangeChange}
           allowClear
         />
         <InputNumber
@@ -189,7 +177,7 @@ export default function ReservationPage() {
           placeholder="Trạng thái"
           allowClear
           style={{ width: 160 }}
-          onChange={(value) => setStatusFilter(value ?? null)}
+          onChange={(value) => setFilters({ status: value ?? null })}
           options={[
             { label: "CONFIRMED", value: "CONFIRMED" },
             { label: "PENDING", value: "PENDING" },
@@ -200,7 +188,7 @@ export default function ReservationPage() {
           placeholder="Thanh toán"
           allowClear
           style={{ width: 180 }}
-          onChange={(value) => setPaidFilter(value ?? null)}
+          onChange={(value) => setFilters({ paid: value ?? null })}
           options={[
             { label: "Đã thanh toán", value: true },
             { label: "Chưa thanh toán", value: false },
@@ -212,12 +200,9 @@ export default function ReservationPage() {
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={filteredData}
+          dataSource={items}
           bordered
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-          }}
+          pagination={pagination}
         />
       </Spin>
       <Modal

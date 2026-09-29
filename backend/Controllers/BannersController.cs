@@ -1,4 +1,5 @@
-﻿using backend.DTO.Banner;
+﻿using backend.DTO.Common;
+using backend.DTO.Banner;
 using backend.Helpers;
 using backend.Model;
 using backend.Service.Implementations;
@@ -25,6 +26,13 @@ namespace backend.Controller
         {
             var data = await _service.GetAllAsync();
             return Ok(ApiResponse<List<BannerDto>>.Success(data));
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
+        {
+            var data = await _service.GetPagedAsync(query);
+            return Ok(ApiResponse<PagedResult<BannerDto>>.Success(data));
         }
         [AllowAnonymous]
         [HttpGet("active")]

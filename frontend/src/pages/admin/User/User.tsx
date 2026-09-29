@@ -1,36 +1,27 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Table, Typography, Spin, message, Input } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { userService, type User } from "@/services/userService";
+import { usePagedList } from "@/hooks/usePagedList";
 
 const { Title } = Typography;
 const { Search } = Input;
 const UserManagementPage: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { items: users, loading, setFilters, pagination } = usePagedList(
+    userService.getPaged,
+    {
+      initialFilters: { search: "" },
+      initialPageSize: 5,
+      onError: () => message.error("Không thể tải danh sách người dùng"),
+    },
+  );
   const [searchText, setSearchText] = useState("");
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const data = await userService.getUsers();
-      setUsers(data);
-    } catch (error) {
-      message.error("Không thể tải danh sách người dùng");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Tìm khi đang gõ nhưng đợi dừng gõ mới gọi API
   useEffect(() => {
-    fetchUsers();
-  }, []);
-  const filteredUsers = useMemo(() => {
-    if (!searchText) return users;
-    return users.filter((u) =>
-      u.username.toLowerCase().includes(searchText.toLowerCase()),
-    );
-  }, [users, searchText]);
+    const timer = setTimeout(() => setFilters({ search: searchText.trim() }), 400);
+    return () => clearTimeout(timer);
+  }, [searchText, setFilters]);
 
   const columns: ColumnsType<User> = [
     {
@@ -55,7 +46,7 @@ const UserManagementPage: React.FC = () => {
     <div>
       <Title level={3}>Quản lý người dùng</Title>
       <Search
-        placeholder="Tìm theo username"
+        placeholder="Tìm theo username hoặc email"
         allowClear
         style={{ width: 300, marginBottom: 16 }}
         enterButton
@@ -65,9 +56,9 @@ const UserManagementPage: React.FC = () => {
         <Table
           rowKey="id"
           columns={columns}
-          dataSource={filteredUsers}
+          dataSource={users}
           bordered
-          pagination={{ pageSize: 5 }}
+          pagination={pagination}
         />
       </Spin>
     </div>

@@ -1,4 +1,5 @@
-﻿using backend.DTO.Reservation;
+﻿using backend.DTO.Common;
+using backend.DTO.Reservation;
 using backend.Helpers;
 using backend.Model;
 using backend.Service.Implementations;
@@ -26,6 +27,13 @@ namespace backend.Controller
             return Ok(result);
         }
 
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] ReservationPagedQuery query)
+        {
+            var data = await _service.GetPagedAsync(query);
+            return Ok(ApiResponse<PagedResult<ReservationDto>>.Success(data));
+        }
+
         [HttpGet("{id:long}")]
         public async Task<IActionResult> GetById(string id)
         {
@@ -38,11 +46,13 @@ namespace backend.Controller
         [HttpPost]
         public async Task<IActionResult> CreateReservation(ReservationRequestDto dto)
         {
+            // Đặt vé cho chính người đang đăng nhập, không tin userId từ client
+            var userId = User.GetUserId();
+            if (userId == null)
+                return Unauthorized(ApiResponse<string>.Fail("Invalid token", 401));
 
-                var reservation = await _service.CreateReservationAsync(dto);
-                return Ok(ApiResponse<ReservationDto>.Success(reservation));
-
-
+            var reservation = await _service.CreateReservationAsync(userId.Value, dto);
+            return Ok(ApiResponse<ReservationDto>.Success(reservation));
         }
         [HttpPut("confirm/{id}")]
         public async Task<IActionResult> ConfirmReservation(string id)
@@ -64,18 +74,27 @@ namespace backend.Controller
             var ok = await _service.CancelReservationAsync(id);
             return NoContent();
         }
-        [HttpGet("user/{userId:long}")]
-        public async Task<IActionResult> GetByUser(long? userId)
+        // userId lấy từ JWT để user chỉ xem được đơn của chính mình
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMine([FromQuery] PagedQuery query)
         {
+            var userId = User.GetUserId();
             if (userId == null)
-                return BadRequest(new { message = "userId is required" });
+                return Unauthorized(ApiResponse<string>.Fail("Invalid token", 401));
 
-            if (userId <= 0)
-                return BadRequest(new { message = "userId must be greater than zero" });
-            var reservations = await _service.GetReservationsByUserAsync(userId.Value);
-            return Ok(ApiResponse<IEnumerable<ReservationDto>>.Success(reservations));
+            var reservations = await _service.GetReservationsByUserAsync(userId.Value, query);
+            return Ok(ApiResponse<PagedResult<ReservationDto>>.Success(reservations));
+        }
 
+        [HttpGet("me/summary")]
+        public async Task<IActionResult> GetMySummary()
+        {
+            var userId = User.GetUserId();
+            if (userId == null)
+                return Unauthorized(ApiResponse<string>.Fail("Invalid token", 401));
 
+            var summary = await _service.GetUserSummaryAsync(userId.Value);
+            return Ok(ApiResponse<UserReservationSummaryDto>.Success(summary));
         }
     }
 }

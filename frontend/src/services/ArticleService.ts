@@ -1,5 +1,6 @@
 import instance from "@/config/axios";
 import type { Article } from "@/types/Article";
+import { toPagedParams, type PagedQuery, type PagedResult } from "@/types/Pagination";
 
 interface ApiResponse<T> {
   code: number;
@@ -12,6 +13,13 @@ export const articleService = {
     return instance.get<ApiResponse<Article[]>>("/articles");
   },
 
+
+  async getPaged(query: PagedQuery): Promise<PagedResult<Article>> {
+    const res = await instance.get<ApiResponse<PagedResult<Article>>>("/articles/paged", {
+      params: toPagedParams(query),
+    });
+    return res.data.data;
+  },
 
   getActive() {
     return instance.get<ApiResponse<Article[]>>("/articles/active");

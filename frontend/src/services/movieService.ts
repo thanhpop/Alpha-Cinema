@@ -1,5 +1,6 @@
 import instance from '@/config/axios';
 import type { Movie } from '@/types/Movie';
+import { mapPagedResult, toPagedParams, type PagedQuery, type PagedResult } from '@/types/Pagination';
 
 function normalizeGenres(m: any): string[] {
     if (!m) return [];
@@ -33,6 +34,10 @@ export const movieService = {
         const res = await instance.get('/movie', { params },);
         const list = res.data.data;
         return list.map(toMovie);
+    },
+    async getPaged(query: PagedQuery): Promise<PagedResult<Movie>> {
+        const res = await instance.get('/movie/paged', { params: toPagedParams(query) });
+        return mapPagedResult(res.data.data, toMovie);
     },
     async getMovieById(id: number) {
         const res = await instance.get(`/movie/${id}`);

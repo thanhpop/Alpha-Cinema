@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { dashboardService, type DashboardResponse } from "../services/dashboardService";
+import { dashboardService, type DashboardResponse } from "@/services/dashboardService";
 
 export const useDashboard = () => {
   const [data, setData] = useState<DashboardResponse | null>(null);

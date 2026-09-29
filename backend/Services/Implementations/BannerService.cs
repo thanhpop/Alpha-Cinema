@@ -1,4 +1,6 @@
-﻿using backend.Data;
+﻿using backend.DTO.Common;
+using backend.Helpers;
+using backend.Data;
 using backend.DTO.Banner;
 using backend.Model;
 using backend.Service.Interfaces;
@@ -27,6 +29,27 @@ namespace backend.Service.Implementations
                     DisplayOrder = b.DisplayOrder
                 })
                 .ToListAsync();
+        }
+
+        public async Task<PagedResult<BannerDto>> GetPagedAsync(PagedQuery query)
+        {
+            var q = _context.Banners.AsNoTracking();
+
+            if (query.Keyword is { } kw)
+                q = q.Where(b => b.Title != null && b.Title.Contains(kw));
+
+            return await q
+                .OrderBy(b => b.DisplayOrder)
+                .ThenBy(b => b.Id)
+                .Select(b => new BannerDto
+                {
+                    Id = b.Id,
+                    ImageUrl = b.ImageUrl,
+                    Title = b.Title,
+                    IsActive = b.IsActive,
+                    DisplayOrder = b.DisplayOrder
+                })
+                .ToPagedResultAsync(query);
         }
 
         public async Task<List<BannerDto>> GetActiveBannersAsync()

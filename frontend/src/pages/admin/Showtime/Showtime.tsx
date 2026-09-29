@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Button,
@@ -17,23 +17,30 @@ import {
   Spin,
   Select,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import AddButton from "@/components/AddButton";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { movieService } from "@/services/movieService";
 import { theaterService } from "@/services/theaterService";
 
 import { showtimeService, type Showtime } from "@/services/showtimeService";
+import { usePagedList } from "@/hooks/usePagedList";
 
 const { Title } = Typography;
 
 const AdminShowtimeHookPage: React.FC = () => {
-  const [items, setItems] = useState<Showtime[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const { items, loading, setFilters, reload, pagination } = usePagedList(
+    showtimeService.getPaged,
+    {
+      initialFilters: { search: "" },
+      onError: (err) => {
+        console.error(err);
+        message.error("Lỗi tải dữ liệu");
+      },
+    },
+  );
+  const [saving, setSaving] = useState(false);
 
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editing, setEditing] = useState<Showtime | null>(null);
@@ -41,63 +48,25 @@ const AdminShowtimeHookPage: React.FC = () => {
   const [theaters, setTheaters] = useState<any[]>([]);
   const [form] = Form.useForm();
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const list = await showtimeService.getAll();
-      setItems(list);
-    } catch (err) {
-      console.error(err);
-      message.error("Lỗi tải dữ liệu");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Danh sách đầy đủ phim / rạp cho dropdown và hiển thị tên, poster
   useEffect(() => {
     let mounted = true;
 
-    const loadAll = async () => {
-      try {
-        setLoading(true);
-        const [list, m, t] = await Promise.all([
-          showtimeService.getAll(),
-          movieService.getMovies(),
-          theaterService.getTheaters(),
-        ]);
-
+    Promise.all([movieService.getMovies(), theaterService.getTheaters()])
+      .then(([m, t]) => {
         if (!mounted) return;
-        setItems(list);
         setMovies(m);
         setTheaters(t);
-      } catch (err) {
+      })
+      .catch((err) => {
         console.error(err);
-        message.error("Lỗi tải dữ liệu");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadAll();
+        message.error("Lỗi tải danh sách phim / rạp");
+      });
 
     return () => {
       mounted = false;
     };
   }, []);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((s) => {
-      return (
-        String(s.id).includes(q) ||
-        String(s.movieId).includes(q) ||
-        String(s.theaterId).includes(q) ||
-        s.showDate.toLowerCase().includes(q) ||
-        s.showDateIso.toLowerCase().includes(q) ||
-        s.showTime.toLowerCase().includes(q)
-      );
-    });
-  }, [items, search]);
 
   const openAddModal = () => {
     form.resetFields();
@@ -138,11 +107,10 @@ const AdminShowtimeHookPage: React.FC = () => {
         totalSeats: Number(values.totalSeats),
       };
 
-      setLoading(true);
+      setSaving(true);
 
       if (editing) {
-        const existing = items.find((i) => i.id === editing.id);
-        const prevAvailable = existing?.availableSeats ?? 0;
+        const prevAvailable = editing.availableSeats ?? 0;
 
         await showtimeService.update(editing.id!, {
           ...payloadBase,
@@ -159,12 +127,12 @@ const AdminShowtimeHookPage: React.FC = () => {
       }
 
       closeEditModal();
-      loadData();
+      reload();
     } catch (err: any) {
       console.error(err);
       message.error(err?.message || "Lỗi khi lưu");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -173,7 +141,7 @@ const AdminShowtimeHookPage: React.FC = () => {
     try {
       await showtimeService.delete(id);
       message.success("Xóa thành công");
-      loadData();
+      reload();
     } catch (err) {
       message.error("Lỗi xóa lịch chiếu");
     }
@@ -266,49 +234,31 @@ const AdminShowtimeHookPage: React.FC = () => {
 
   return (
     <>
-      <Space direction="vertical" style={{ width: "100%" }}>
-        <Row justify="space-between" align="middle" style={{ width: "100%" }}>
-          <Col>
-            <Title level={3} style={{ margin: 0 }}>
-              Quản lý lịch chiếu
-            </Title>
-            <div style={{ marginTop: 8 }}>
-              <Input.Search
-                placeholder="Tìm kiếm..."
-                allowClear
-                onSearch={setSearch}
-                enterButton
-                style={{ width: 360, fontSize: 16 }}
-              />
-            </div>
-          </Col>
+      <Space direction="vertical" style={{ width: "100%" }} size="middle">
+        <Title level={3}>Quản lý lịch chiếu</Title>
 
+        <Row style={{ width: "100%" }} align="middle" gutter={12}>
           <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openAddModal}
-            >
-              Tạo lịch chiếu
-            </Button>
+            <Input.Search
+              placeholder="Tên phim, rạp hoặc ngày (dd/MM/yyyy)"
+              allowClear
+              onSearch={(v) => setFilters({ search: v })}
+              enterButton
+              style={{ width: 360, fontSize: 16 }}
+            />
+          </Col>
+          <Col flex="auto" />
+          <Col>
+            <AddButton onClick={openAddModal}>Tạo lịch chiếu</AddButton>
           </Col>
         </Row>
 
         <Spin spinning={loading}>
           <Table
             columns={columns}
-            dataSource={filtered}
+            dataSource={items}
             rowKey="id"
-            pagination={{
-              current: page,
-              pageSize,
-              total: filtered.length,
-              showSizeChanger: true,
-              onChange: (p, ps) => {
-                setPage(p);
-                setPageSize(ps);
-              },
-            }}
+            pagination={pagination}
           />
         </Spin>
       </Space>
@@ -318,6 +268,7 @@ const AdminShowtimeHookPage: React.FC = () => {
         open={isEditModalVisible}
         onCancel={closeEditModal}
         onOk={handleSave}
+        confirmLoading={saving}
         width={720}
       >
         <Form form={form} layout="vertical">

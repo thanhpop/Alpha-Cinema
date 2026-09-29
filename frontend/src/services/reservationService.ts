@@ -1,4 +1,5 @@
 import instance from "@/config/axios";
+import { toPagedParams, type PagedQuery, type PagedResult } from "@/types/Pagination";
 
 export interface SeatResponse {
   id: number;
@@ -9,7 +10,6 @@ export interface SeatResponse {
 
 
 export interface CreateReservationRequest {
-  userId: number;
   showtimeId: number;
   seatIds: number[];
 }
@@ -33,6 +33,20 @@ export interface ReservationResponse {
   seats?: SeatResponse[];
 }
 
+export interface ReservationFilters {
+  fromDate?: string; // yyyy-MM-dd
+  toDate?: string; // yyyy-MM-dd
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  status?: string | null;
+  paid?: boolean | null;
+}
+
+export interface UserReservationSummary {
+  totalTickets: number;
+  totalSpent: number;
+}
+
 export const reservationService = {
   createReservation: async (
     data: CreateReservationRequest
@@ -48,10 +62,23 @@ export const reservationService = {
     const res = await instance.get("/reservation");
     return res.data;
   },
-    getReservationsByUserId: async (
-    userId: number
-  ): Promise<ReservationResponse[]> => {
-    const res = await instance.get(`/reservation/user/${userId}`);
+    getPaged: async (
+    query: PagedQuery & ReservationFilters
+  ): Promise<PagedResult<ReservationResponse>> => {
+    const res = await instance.get("/reservation/paged", { params: toPagedParams(query) });
+    return res.data.data;
+  },
+  // Backend lấy user từ token, không cần truyền userId
+    getMyReservations: async (
+    query: PagedQuery
+  ): Promise<PagedResult<ReservationResponse>> => {
+    const res = await instance.get("/reservation/me", {
+      params: toPagedParams(query),
+    });
+    return res.data.data;
+  },
+    getMySummary: async (): Promise<UserReservationSummary> => {
+    const res = await instance.get("/reservation/me/summary");
     return res.data.data;
   },
 };

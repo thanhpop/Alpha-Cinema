@@ -72,16 +72,10 @@ const BookingPage: React.FC = () => {
   useEffect(() => {
     if (!showtimeId) return;
 
-    const userStr = localStorage.getItem("user");
-    if (!userStr) return;
-
-    const user = JSON.parse(userStr);
+    if (!localStorage.getItem("user")) return;
 
     const startSession = async () => {
-      const data = await seatSessionService.startSession(
-        Number(showtimeId),
-        user.userId,
-      );
+      const data = await seatSessionService.startSession(Number(showtimeId));
 
       if (data.expireAt) {
         setExpireAt(data.expireAt);
@@ -232,17 +226,11 @@ const BookingPage: React.FC = () => {
   useEffect(() => {
     if (!showtimeId) return;
     if (seats.length === 0) return;
-    const userStr = localStorage.getItem("user");
-    if (!userStr) return;
-
-    const user = JSON.parse(userStr);
+    if (!localStorage.getItem("user")) return;
 
     const loadSnapshot = async () => {
       try {
-        const data = await seatSessionService.getSnapshot(
-          Number(showtimeId),
-          user.userId,
-        );
+        const data = await seatSessionService.getSnapshot(Number(showtimeId));
 
         setHoldSeatIds(data.holdSeats || []);
 
@@ -285,19 +273,14 @@ const BookingPage: React.FC = () => {
     const isHeldByOthers = holdSeatIds.includes(seat.id) && !isSelected;
     if (seat.isReserved || isHeldByOthers) return;
 
-    const userStr = localStorage.getItem("user");
-    if (!userStr) {
+    if (!localStorage.getItem("user")) {
       message.error("Vui lòng đăng nhập");
       return;
     }
 
-    const user = JSON.parse(userStr);
-
     try {
       if (isSelected) {
-        await seatSessionService.removeSeats(Number(showtimeId), user.userId, [
-          seat.id,
-        ]);
+        await seatSessionService.removeSeats(Number(showtimeId), [seat.id]);
 
         setSelectedSeats((prev) => prev.filter((s) => s.id !== seat.id));
       } else {
@@ -306,9 +289,7 @@ const BookingPage: React.FC = () => {
           return;
         }
 
-        await seatSessionService.addSeats(Number(showtimeId), user.userId, [
-          seat.id,
-        ]);
+        await seatSessionService.addSeats(Number(showtimeId), [seat.id]);
 
         setSelectedSeats((prev) => [...prev, seat]);
       }
@@ -341,10 +322,8 @@ const BookingPage: React.FC = () => {
         return;
       }
 
-      const user = JSON.parse(userStr);
-
+      // Backend lấy userId từ token
       const reservation = await reservationService.createReservation({
-        userId: user.userId,
         showtimeId: Number(showtimeId),
         seatIds: selectedSeats.map((s) => s.id),
       });

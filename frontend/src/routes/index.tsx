@@ -2,36 +2,39 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 
 import AdminLayout from "@/layouts/AdminLayout";
-import MoviePage from "@/pages/admin/Movie";
+import MoviePage from "@/pages/admin/Movie/Movie";
 
 import NotFoundPage from "@/pages/error/error_404.tsx";
-import PaymentResult from "@/pages/home/PaymentResult.tsx";
-import TheaterPage from "@/pages/admin/Theater.tsx";
-import Showtime from "@/pages/admin/Showtime.tsx";
-import HomePage from "@/pages/home/Home.tsx";
+import PaymentResult from "@/pages/home/PaymentResult/PaymentResult";
+import TheaterPage from "@/pages/admin/Theater/Theater";
+import Showtime from "@/pages/admin/Showtime/Showtime";
+import HomePage from "@/pages/home/Home/Home";
 import Auth from "@/pages/auth/Auth.tsx";
-import MovieDetailPage from "@/pages/home/MovieDetail.tsx";
-import BookingPage from "@/pages/home/Booking.tsx";
-import ReservationPage from "@/pages/admin/Reservation.tsx";
-import ProfilePage from "@/pages/home/ProfilePage.tsx";
-import UserManagementPage from "@/pages/admin/User.tsx";
-import ArticlePage from "@/pages/home/ArticlePage";
-import BannerPage from "@/pages/admin/Banner.tsx";
-import NewsManagementPage from "@/pages/admin/Article";
-import ArticleDetailPage from "@/pages/home/ArticleDetailPage";
-import AdminDashboard from "@/pages/admin/Dashboard.tsx";
+import MovieDetailPage from "@/pages/home/MovieDetail/MovieDetail";
+import BookingPage from "@/pages/home/Booking/Booking";
+import ReservationPage from "@/pages/admin/Reservation/Reservation";
+import ProfilePage from "@/pages/home/ProfilePage/ProfilePage";
+import UserManagementPage from "@/pages/admin/User/User";
+import ArticlePage from "@/pages/home/ArticlePage/ArticlePage";
+import BannerPage from "@/pages/admin/Banner/Banner";
+import NewsManagementPage from "@/pages/admin/Article/Article";
+import ArticleDetailPage from "@/pages/home/ArticleDetailPage/ArticleDetailPage";
+import AdminDashboard from "@/pages/admin/Dashboard/Dashboard";
 import MainLayout from "@/layouts/UserLayout";
 import ProtectedRoute from "@/routes/ProtectedRoute";
+import GuestRoute from "@/routes/GuestRoute";
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<Auth />} />
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<Auth />} />
+        </Route>
 
         <Route path="/movie/:id" element={<MovieDetailPage />} />
-        <Route element={<ProtectedRoute allowedRoles={["USER"]} />}>
+        <Route element={<ProtectedRoute />}>
           <Route path="/booking/:showtimeId" element={<BookingPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>

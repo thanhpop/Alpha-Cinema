@@ -1,4 +1,6 @@
-﻿using backend.Data;
+﻿using backend.DTO.Common;
+using System.Linq.Expressions;
+using backend.Data;
 using backend.Helpers;
 using backend.DTO.Reservation;
 using backend.DTO.Seat;
@@ -30,31 +32,69 @@ namespace backend.Service.Implementations
             return $"{hexTime}{random}";
         }
 
+        private static readonly Expression<Func<Reservation, ReservationDto>> ToDtoExpression = r => new ReservationDto
+        {
+            Id = r.Id,
+            UserId = r.UserId,
+            ShowtimeId = r.ShowtimeId,
+            ReservationTime = r.ReservationTime,
+            ShowDate = r.Showtime.ShowDate,
+            ShowTimeValue = r.Showtime.ShowTime,
+            MovieName = r.Showtime.Movie.title,
+            TheaterName = r.Showtime.Theater.name,
+            StatusId = r.StatusId,
+            StatusValue = MapStatus(r.StatusId),
+            TotalPrice = r.TotalPrice,
+            Paid = r.Paid,
+            Seats = r.Seats.Select(s => new SeatDto
+            {
+                Id = s.Id,
+                ShowtimeId = s.ShowtimeId,
+                SeatNumber = s.SeatNumber,
+                IsReserved = s.IsReserved
+            }).ToList()
+        };
+
         public async Task<IEnumerable<ReservationDto>> GetAllAsync()
         {
             return await _db.Reservations.AsNoTracking()
-               .Select(r => new ReservationDto
-               {
-                   Id = r.Id,
-                   UserId = r.UserId,
-                   ShowtimeId = r.ShowtimeId,
-                   ReservationTime = r.ReservationTime,
-                   ShowDate = r.Showtime.ShowDate,
-                   ShowTimeValue = r.Showtime.ShowTime,
-                   MovieName = r.Showtime.Movie.title,
-                   TheaterName = r.Showtime.Theater.name,
-                   StatusId = r.StatusId,
-                   StatusValue = MapStatus(r.StatusId),
-                   TotalPrice = r.TotalPrice,
-                   Paid = r.Paid,
-                   Seats = r.Seats.Select(s => new SeatDto
-                   {
-                       Id = s.Id,
-                       ShowtimeId = s.ShowtimeId,
-                       SeatNumber = s.SeatNumber,
-                       IsReserved = s.IsReserved
-                   }).ToList()
-               }).ToListAsync();
+               .Select(ToDtoExpression)
+               .ToListAsync();
+        }
+
+        public async Task<PagedResult<ReservationDto>> GetPagedAsync(ReservationPagedQuery query)
+        {
+            var q = _db.Reservations.AsNoTracking();
+
+            if (query.FromDate.HasValue)
+            {
+                var from = query.FromDate.Value.Date;
+                q = q.Where(r => r.ReservationTime >= from);
+            }
+            if (query.ToDate.HasValue)
+            {
+                var toExclusive = query.ToDate.Value.Date.AddDays(1);
+                q = q.Where(r => r.ReservationTime < toExclusive);
+            }
+            if (query.MinPrice.HasValue)
+                q = q.Where(r => r.TotalPrice >= query.MinPrice.Value);
+            if (query.MaxPrice.HasValue)
+                q = q.Where(r => r.TotalPrice <= query.MaxPrice.Value);
+            if (query.Paid.HasValue)
+                q = q.Where(r => r.Paid == query.Paid.Value);
+            if (!string.IsNullOrWhiteSpace(query.Status))
+            {
+                var statusId = MapStatusId(query.Status);
+                q = q.Where(r => r.StatusId == statusId);
+            }
+            if (query.Keyword is { } kw)
+                q = q.Where(r => r.Id.Contains(kw) ||
+                                 (r.Showtime.Movie.title != null && r.Showtime.Movie.title.Contains(kw)));
+
+            return await q
+                .OrderByDescending(r => r.ReservationTime)
+                .Select(ToDtoExpression)
+                .ToPagedResultAsync(query);
         }
         public async Task<ReservationDto?> GetByIdAsync(string id)
         {
@@ -87,12 +127,9 @@ namespace backend.Service.Implementations
 
             return reservation;
         }
-        public async Task<ReservationDto?> CreateReservationAsync(ReservationRequestDto dto)
+        public async Task<ReservationDto?> CreateReservationAsync(long userId, ReservationRequestDto dto)
         {
-            if (dto.UserId <= 0)
-                throw new Exception("UserId cannot be null");
-
-            var user = await _db.Users.FindAsync(dto.UserId);
+            var user = await _db.Users.FindAsync(userId);
             if (user == null)
                 throw new Exception("User not found");
 
@@ -141,7 +178,7 @@ namespace backend.Service.Implementations
             var reservation = new Reservation
             {
                 Id = GenerateHexId(),
-                UserId = dto.UserId,
+                UserId = userId,
                 ShowtimeId = dto.ShowtimeId,
                 ReservationTime = DateTimeHelper.Now,
                 StatusId = 1, 
@@ -277,40 +314,28 @@ namespace backend.Service.Implementations
                 throw;
             }
         }
-        public async Task<IEnumerable<ReservationDto>> GetReservationsByUserAsync(long? userId)
+        public async Task<PagedResult<ReservationDto>> GetReservationsByUserAsync(long userId, PagedQuery query)
         {
-            if (userId == null)
-                throw new ArgumentNullException(nameof(userId), "UserId cannot be null");
-
-
-            var reservations = await _db.Reservations
+            return await _db.Reservations
                 .AsNoTracking()
                 .Where(r => r.UserId == userId)
-                .Select(r => new ReservationDto
-                {
-                    Id = r.Id,
-                    UserId = r.UserId,
-                    ShowtimeId = r.ShowtimeId,
-                    ReservationTime = r.ReservationTime,
-                    ShowDate = r.Showtime.ShowDate,
-                    ShowTimeValue = r.Showtime.ShowTime,
-                    MovieName = r.Showtime.Movie.title,
-                    TheaterName = r.Showtime.Theater.name,
-                    StatusId = r.StatusId,
-                    StatusValue = MapStatus(r.StatusId),
-                    TotalPrice = r.TotalPrice,
-                    Paid = r.Paid,
-                    Seats = r.Seats.Select(s => new SeatDto
-                    {
-                        Id = s.Id,
-                        ShowtimeId = s.ShowtimeId,
-                        SeatNumber = s.SeatNumber,
-                        IsReserved = s.IsReserved
-                    }).ToList()
-                })
-                .ToListAsync();
+                .OrderByDescending(r => r.ReservationTime)
+                .Select(ToDtoExpression)
+                .ToPagedResultAsync(query);
+        }
 
-            return reservations;
+        public async Task<UserReservationSummaryDto> GetUserSummaryAsync(long userId)
+        {
+            var confirmedId = MapStatusId("CONFIRMED");
+            var confirmed = _db.Reservations
+                .AsNoTracking()
+                .Where(r => r.UserId == userId && r.StatusId == confirmedId);
+
+            return new UserReservationSummaryDto
+            {
+                TotalTickets = await confirmed.SelectMany(r => r.Seats).CountAsync(),
+                TotalSpent = await confirmed.SumAsync(r => (decimal?)r.TotalPrice) ?? 0
+            };
         }
         public async Task<bool> DeleteAsync(string id)
         {
@@ -338,6 +363,17 @@ namespace backend.Service.Implementations
                 2 => "CONFIRMED",
                 3 => "CANCELED",
                 _ => "UNKNOWN"
+            };
+        }
+
+        private static int MapStatusId(string status)
+        {
+            return status.Trim().ToUpperInvariant() switch
+            {
+                "PENDING" => 1,
+                "CONFIRMED" => 2,
+                "CANCELED" => 3,
+                _ => 0
             };
         }
     }

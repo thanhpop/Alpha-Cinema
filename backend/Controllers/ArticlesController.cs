@@ -1,4 +1,5 @@
-﻿using backend.DTO.Articles;
+﻿using backend.DTO.Common;
+using backend.DTO.Articles;
 using backend.Helpers;
 using backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,14 @@ namespace backend.Controllers
         {
             var data = await _service.GetAllAsync();
             return Ok(ApiResponse<List<ArticlesDto>>.Success(data));
+        }
+
+        [Authorize]
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
+        {
+            var data = await _service.GetPagedAsync(query);
+            return Ok(ApiResponse<PagedResult<ArticlesDto>>.Success(data));
         }
 
         [HttpGet("active")]

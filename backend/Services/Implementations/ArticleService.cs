@@ -1,4 +1,6 @@
-﻿using backend.Data;
+﻿using backend.DTO.Common;
+using backend.Helpers;
+using backend.Data;
 using backend.DTO.Articles;
 using backend.Model;
 using backend.Service.Interfaces;
@@ -21,6 +23,20 @@ namespace backend.Service.Implementations
                 .OrderByDescending(n => n.CreatedAt)
                 .Select(n => ToDto(n))
                 .ToListAsync();
+        }
+
+        public async Task<PagedResult<ArticlesDto>> GetPagedAsync(PagedQuery query)
+        {
+            var q = _context.Articles.AsNoTracking();
+
+            if (query.Keyword is { } kw)
+                q = q.Where(n => n.Title.Contains(kw));
+
+            var paged = await q
+                .OrderByDescending(n => n.CreatedAt)
+                .ThenByDescending(n => n.Id)
+                .ToPagedResultAsync(query);
+            return paged.Map(ToDto);
         }
 
         public async Task<List<ArticlesDto>> GetActiveAsync()

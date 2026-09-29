@@ -1,4 +1,5 @@
-﻿using backend.DTO.Theater;
+﻿using backend.DTO.Common;
+using backend.DTO.Theater;
 using backend.Helpers;
 using backend.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -26,6 +27,14 @@ namespace backend.Controllers
             var data = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<TheaterDto>>.Success(data));
         }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
+        {
+            var data = await _service.GetPagedAsync(query);
+            return Ok(ApiResponse<PagedResult<TheaterDto>>.Success(data));
+        }
+
         [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(long id)

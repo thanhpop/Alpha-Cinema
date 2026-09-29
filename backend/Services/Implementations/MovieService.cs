@@ -1,4 +1,6 @@
-﻿using backend.Data;
+﻿using backend.DTO.Common;
+using backend.Helpers;
+using backend.Data;
 using backend.DTO.Movie;
 using backend.Model;
 using backend.Service.Interfaces;
@@ -15,6 +17,17 @@ namespace backend.Services.Implementations
         {
             var entities = await _db.Movies.AsNoTracking().ToListAsync();
             return entities.Select(MapToDto);
+        }
+
+        public async Task<PagedResult<MovieDto>> GetPagedAsync(PagedQuery query)
+        {
+            var q = _db.Movies.AsNoTracking();
+
+            if (query.Keyword is { } kw)
+                q = q.Where(m => m.title != null && m.title.Contains(kw));
+
+            var paged = await q.OrderByDescending(m => m.id).ToPagedResultAsync(query);
+            return paged.Map(MapToDto);
         }
 
         public async Task<MovieDto?> GetByIdAsync(long id)

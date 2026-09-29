@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   Table,
   Button,
@@ -15,33 +15,36 @@ import {
   Spin,
 } from "antd";
 import {
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
+import AddButton from "@/components/AddButton";
 import type { ColumnsType } from "antd/es/table";
 import type { Theater } from "@/types/Theater";
 import theaterService from "@/services/theaterService";
-import { useAppDispatch } from "@/hooks/useAppDispatch";
-import { useAppSelector } from "@/hooks/useAppSelector";
-import {
-  setTheaters,
-  addTheater,
-  updateTheater as updateTheaterAction,
-  removeTheater,
-} from "@/features/theater/theaterSlice";
+import { usePagedList } from "@/hooks/usePagedList";
 
 const { Title } = Typography;
 
 const AdminTheaterPage: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const theaters = useAppSelector((s) => s.theaters.items);
-
-  const [loading, setLoading] = useState<boolean>(false);
-  const [search, setSearch] = useState<string>("");
-  const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
+  const {
+    items: theaters,
+    loading,
+    setFilters,
+    reload,
+    pagination,
+  } = usePagedList(theaterService.getPaged, {
+    initialFilters: { search: "" },
+    onError: (err: any) => {
+      console.error("Load theaters error", err);
+      if (err?.response?.status === 401) {
+        message.error("Chưa xác thực (401). Vui lòng đăng nhập.");
+      } else {
+        message.error("Không thể tải danh sách rạp từ server");
+      }
+    },
+  });
 
   const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState<boolean>(false);
@@ -49,37 +52,6 @@ const AdminTheaterPage: React.FC = () => {
 
   const [form] = Form.useForm<Theater>();
   const [viewForm] = Form.useForm<Theater>();
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const list = await theaterService.getTheaters();
-        dispatch(setTheaters(list));
-      } catch (err: any) {
-        console.error("Load theaters error", err);
-        if (err?.response?.status === 401) {
-          message.error("Chưa xác thực (401). Vui lòng đăng nhập.");
-        } else {
-          message.error("Không thể tải danh sách rạp từ server");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [dispatch]);
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return theaters;
-    return theaters.filter(
-      (t) =>
-        (t.name ?? "").toLowerCase().includes(q) ||
-        (t.location ?? "").toLowerCase().includes(q) ||
-        String(t.id ?? "").includes(q),
-    );
-  }, [theaters, search]);
 
   const openAddModal = () => {
     form.resetFields();
@@ -124,18 +96,14 @@ const AdminTheaterPage: React.FC = () => {
       };
 
       if (editing && editing.id) {
-        const updated = await theaterService.updateTheater(
-          Number(editing.id),
-          payload,
-        );
-        dispatch(updateTheaterAction(updated));
+        await theaterService.updateTheater(Number(editing.id), payload);
         message.success("Cập nhật rạp thành công");
       } else {
-        const created = await theaterService.createTheater(payload);
-        dispatch(addTheater(created));
+        await theaterService.createTheater(payload);
         message.success("Tạo rạp thành công");
       }
       closeEditModal();
+      reload();
     } catch (err: any) {
       console.error("Save theater error", err);
       if (err?.response?.data?.message)
@@ -149,7 +117,7 @@ const AdminTheaterPage: React.FC = () => {
     if (!id) return;
     try {
       await theaterService.deleteTheater(id);
-      dispatch(removeTheater(id));
+      reload();
       message.success("Xóa rạp thành công");
     } catch (err: any) {
       console.error("Delete theater error", err);
@@ -212,39 +180,23 @@ const AdminTheaterPage: React.FC = () => {
             <Input.Search
               placeholder="Tìm kiếm theo tên, địa điểm"
               allowClear
-              onSearch={(v) => setSearch(v)}
+              onSearch={(v) => setFilters({ search: v })}
               enterButton
               style={{ width: 360, fontSize: 16 }}
             />
           </Col>
           <Col flex="auto" />
           <Col>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openAddModal}
-            >
-              Tạo rạp
-            </Button>
+            <AddButton onClick={openAddModal}>Tạo rạp</AddButton>
           </Col>
         </Row>
 
         <Spin spinning={loading}>
           <Table
             columns={columns}
-            dataSource={filtered}
+            dataSource={theaters}
             rowKey="id"
-            pagination={{
-              current: page,
-              pageSize,
-              total: filtered.length,
-              showSizeChanger: true,
-              pageSizeOptions: ["5", "10", "20", "50"],
-              onChange: (p, ps) => {
-                setPage(p);
-                setPageSize(ps);
-              },
-            }}
+            pagination={pagination}
           />
         </Spin>
       </Space>

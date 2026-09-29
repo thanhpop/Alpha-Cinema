@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Table,
   Button,
@@ -23,22 +23,15 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
-  PlusOutlined,
 } from "@ant-design/icons";
+import AddButton from "@/components/AddButton";
 import type { ColumnsType } from "antd/es/table";
 import moment from "moment";
 import axios from "axios";
 import { z } from "zod";
 import type { Movie, ApiMovie } from "@/types/Movie";
 
-import { useAppDispatch } from "@/hooks/useAppDispatch";
-import { useAppSelector } from "@/hooks/useAppSelector";
-import {
-  setMovies,
-  addMovie,
-  updateMovie,
-  removeMovie,
-} from "@/features/movies/moviesSlice";
+import { usePagedList } from "@/hooks/usePagedList";
 import movieService from "@/services/movieService";
 
 const { Title } = Typography;
@@ -67,10 +60,24 @@ const MovieSchema = z.object({
 });
 
 const MoviePage: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const movies = useAppSelector((state) => state.movies.items);
-  const [search, setSearch] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
+  const {
+    items: movies,
+    loading,
+    setFilters,
+    reload,
+    pagination,
+    rowNumber,
+  } = usePagedList(movieService.getPaged, {
+    initialFilters: { search: "" },
+    onError: (err: any) => {
+      console.error("Load movies error", err);
+      if (err?.response?.status === 401) {
+        message.error("Chưa xác thực (401). Vui lòng đăng nhập.");
+      } else {
+        message.error("Không thể tải danh sách phim từ server");
+      }
+    },
+  });
   const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState<boolean>(false);
   const [isApiModalVisible, setIsApiModalVisible] = useState<boolean>(false);
@@ -80,39 +87,12 @@ const MoviePage: React.FC = () => {
   const [form] = Form.useForm<any>();
   const [viewForm] = Form.useForm<any>();
 
-  const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(10);
-
   const normalizeGenre = (g?: string) => {
     if (!g || typeof g !== "string") return "";
     return String(g)
       .replace(/^\s*\bphim\b[\s:–—-]*/i, "")
       .trim();
   };
-
-  const filtered = movies.filter((item) =>
-    item.title.toLowerCase().includes(search.toLowerCase()),
-  );
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const items = await movieService.getMovies();
-        dispatch(setMovies(items));
-      } catch (err: any) {
-        console.error("Load movies error", err);
-        if (err?.response?.status === 401) {
-          message.error("Chưa xác thực (401). Vui lòng đăng nhập.");
-        } else {
-          message.error("Không thể tải danh sách phim từ server");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [dispatch]);
 
   const openAddModal = () => {
     form.resetFields();
@@ -215,15 +195,14 @@ const MoviePage: React.FC = () => {
       if (editingId) {
         const updated = await movieService.updateMovie(editingId, payload);
         console.log("updated from API:", updated);
-        dispatch(updateMovie(updated));
         message.success("Cập nhật phim thành công");
       } else {
         const created = await movieService.createMovie(payload);
         console.log("[MoviePage] create response:", created);
-        dispatch(addMovie(created));
         message.success("Thêm phim thành công");
       }
       closeEditModal();
+      reload();
     } catch (err: any) {
       console.error(err);
       if (err?.response?.data?.message)
@@ -236,7 +215,7 @@ const MoviePage: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       await movieService.deleteMovie(id);
-      dispatch(removeMovie(id));
+      reload();
       message.success("Xóa phim thành công");
     } catch (err: any) {
       console.error("Delete error", err);
@@ -365,7 +344,7 @@ const MoviePage: React.FC = () => {
       title: "STT",
       key: "index",
       width: 80,
-      render: (_v, _r, index) => (page - 1) * pageSize + (index + 1),
+      render: (_v, _r, index) => rowNumber(index),
     },
     {
       title: "Poster",
@@ -447,38 +426,22 @@ const MoviePage: React.FC = () => {
             <Input.Search
               placeholder="Tìm kiếm phim"
               allowClear
-              onSearch={(value) => setSearch(value)}
+              onSearch={(value) => setFilters({ search: value })}
               enterButton
               style={{ width: 400, fontSize: "16px" }}
             />
           </Col>
           <Col flex="auto" />
-          <Col style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={openAddModal}
-            >
-              Thêm phim
-            </Button>
+          <Col>
+            <AddButton onClick={openAddModal}>Thêm phim</AddButton>
           </Col>
         </Row>
         <Spin spinning={loading}>
           <Table
             columns={columns}
-            dataSource={filtered}
+            dataSource={movies}
             rowKey="id"
-            pagination={{
-              current: page,
-              pageSize,
-              total: filtered.length,
-              showSizeChanger: true,
-              pageSizeOptions: ["5", "10", "20", "50"],
-              onChange: (p, ps) => {
-                setPage(p);
-                setPageSize(ps);
-              },
-            }}
+            pagination={pagination}
           />
         </Spin>
       </Space>

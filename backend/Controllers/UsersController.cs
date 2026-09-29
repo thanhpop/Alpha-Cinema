@@ -1,4 +1,5 @@
-﻿using backend.DTO.User;
+﻿using backend.DTO.Common;
+using backend.DTO.User;
 using backend.Helpers;
 using backend.Model;
 using backend.Service.Interfaces;
@@ -26,6 +27,13 @@ namespace backend.Controller
         {
             var users = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<UserDto>>.Success(users));
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
+        {
+            var data = await _service.GetPagedAsync(query);
+            return Ok(ApiResponse<PagedResult<UserDto>>.Success(data));
         }
 
 

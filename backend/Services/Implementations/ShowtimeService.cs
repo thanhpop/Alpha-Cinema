@@ -1,4 +1,5 @@
 ﻿
+using backend.DTO.Common;
 using backend.Data;
 using backend.Helpers;
 using backend.DTO;
@@ -52,6 +53,44 @@ namespace backend.Services.Implementations
                     IsReserved = se.IsReserved
                 }).ToList()
             });
+        }
+
+        public async Task<PagedResult<ShowtimeDto>> GetPagedAsync(PagedQuery query)
+        {
+            var q = _db.Showtimes.AsNoTracking();
+
+            if (query.Keyword is { } kw)
+            {
+                // Nhập đúng ngày (dd/MM/yyyy hoặc yyyy-MM-dd) thì lọc theo ngày chiếu, còn lại tìm theo tên phim / rạp
+                if (DateTime.TryParseExact(kw, new[] { "dd/MM/yyyy", "yyyy-MM-dd" },
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+                {
+                    var d = date.Date;
+                    q = q.Where(s => s.ShowDate == d);
+                }
+                else
+                {
+                    q = q.Where(s => (s.Movie.title != null && s.Movie.title.Contains(kw)) ||
+                                     (s.Theater.name != null && s.Theater.name.Contains(kw)));
+                }
+            }
+
+            // Danh sách admin không cần chi tiết từng ghế
+            return await q
+                .OrderByDescending(s => s.ShowDate)
+                .ThenByDescending(s => s.ShowTime)
+                .Select(s => new ShowtimeDto
+                {
+                    Id = s.Id,
+                    MovieId = s.MovieId,
+                    TheaterId = s.TheaterId,
+                    ShowDate = s.ShowDate,
+                    ShowTimeValue = s.ShowTime,
+                    Price = s.Price,
+                    TotalSeats = s.TotalSeats,
+                    AvailableSeats = s.AvailableSeats
+                })
+                .ToPagedResultAsync(query);
         }
 
 

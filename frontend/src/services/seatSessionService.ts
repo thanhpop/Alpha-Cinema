@@ -1,51 +1,36 @@
-
 import instance from "@/config/axios";
 
-
+// Backend lấy userId từ token, không cần truyền lên
 export const seatSessionService = {
-  startSession: async (showtimeId: number, userId: number) => {
+  startSession: async (showtimeId: number) => {
     const res = await instance.post(
       `/seat-sessions/start`,
       null,
       {
-        params: { showtimeId, userId },
+        params: { showtimeId },
       }
     );
     return res.data;
   },
 
-  addSeats: async (
-    showtimeId: number,
-    userId: number,
-    seatIds: number[]
-  ) => {
+  addSeats: async (showtimeId: number, seatIds: number[]) => {
     const res = await instance.post(
-      `/seat-sessions/${showtimeId}/${userId}/add`,
+      `/seat-sessions/${showtimeId}/add`,
       seatIds
     );
     return res.data;
   },
 
-  
-  removeSeats: async (
-    showtimeId: number,
-    userId: number,
-    seatIds: number[]
-  ) => {
+  removeSeats: async (showtimeId: number, seatIds: number[]) => {
     const res = await instance.post(
-      `/seat-sessions/${showtimeId}/${userId}/remove`,
+      `/seat-sessions/${showtimeId}/remove`,
       seatIds
     );
     return res.data;
   },
-  
-  getSnapshot: async (showtimeId: number, userId: number) => {
-    const res = await instance.get(
-      `/seat-sessions/${showtimeId}/snapshot`,
-      {
-        params: { userId },
-      }
-    );
+
+  getSnapshot: async (showtimeId: number) => {
+    const res = await instance.get(`/seat-sessions/${showtimeId}/snapshot`);
     return res.data;
   },
 };

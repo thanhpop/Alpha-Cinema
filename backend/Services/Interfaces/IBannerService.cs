@@ -1,4 +1,5 @@
-﻿using backend.DTO.Banner;
+﻿using backend.DTO.Common;
+using backend.DTO.Banner;
 
 namespace backend.Service.Interfaces
 {
@@ -7,6 +8,7 @@ namespace backend.Service.Interfaces
         Task<List<BannerDto>> GetActiveBannersAsync();
 
         Task<List<BannerDto>> GetAllAsync();
+        Task<PagedResult<BannerDto>> GetPagedAsync(PagedQuery query);
         Task<BannerDto> CreateAsync(BannerDto dto);
         Task<BannerDto> UpdateAsync(int id, BannerDto dto);
         Task<bool> DeleteAsync(int id);

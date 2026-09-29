@@ -1,5 +1,6 @@
 import instance from '@/config/axios';
 import type { Theater } from '@/types/Theater';
+import { mapPagedResult, toPagedParams, type PagedQuery, type PagedResult } from '@/types/Pagination';
 
 function toTheater(t: any): Theater {
   return {
@@ -17,6 +18,11 @@ export const theaterService = {
     const res = await instance.get('/theater', { params });
     const list = res.data?.data ?? [];
     return (Array.isArray(list) ? list : []).map(toTheater);
+  },
+
+  async getPaged(query: PagedQuery): Promise<PagedResult<Theater>> {
+    const res = await instance.get('/theater/paged', { params: toPagedParams(query) });
+    return mapPagedResult(res.data.data, toTheater);
   },
 
   async getById(id: number): Promise<Theater | null> {

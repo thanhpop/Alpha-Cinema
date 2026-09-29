@@ -1,4 +1,5 @@
 import instance from "@/config/axios";
+import { mapPagedResult, toPagedParams, type PagedQuery, type PagedResult } from "@/types/Pagination";
 
 export interface Seat {
   id: number;
@@ -50,6 +51,11 @@ export const showtimeService = {
     const res = await instance.get("/showtimes");
     const list = res.data?.data ?? [];
     return Array.isArray(list) ? list.map(toShowtime) : [];
+  },
+
+  async getPaged(query: PagedQuery): Promise<PagedResult<Showtime>> {
+    const res = await instance.get("/showtimes/paged", { params: toPagedParams(query) });
+    return mapPagedResult(res.data.data, toShowtime);
   },
 
   async getById(id: number): Promise<Showtime> {

@@ -1,4 +1,5 @@
-﻿using backend.DTO.Showtime;
+﻿using backend.DTO.Common;
+using backend.DTO.Showtime;
 using backend.Helpers;
 using backend.Service.Interfaces;
 using backend.Services.Implementations;
@@ -27,6 +28,13 @@ namespace backend.Controllers
         {
             var list = await _service.GetAllAsync();
             return Ok(new ApiResponse<object>(200, "Success", list));
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
+        {
+            var data = await _service.GetPagedAsync(query);
+            return Ok(ApiResponse<PagedResult<ShowtimeDto>>.Success(data));
         }
         [AllowAnonymous]
         [HttpGet("{id:long}")]

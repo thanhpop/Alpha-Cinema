@@ -1,4 +1,6 @@
-﻿using backend.Data;
+﻿using backend.DTO.Common;
+using backend.Helpers;
+using backend.Data;
 using backend.DTO.Theater;
 using backend.Model;
 using backend.Services.Interfaces;
@@ -15,6 +17,18 @@ namespace backend.Services.Implementations
         {
             var entities = await _db.Theaters.AsNoTracking().ToListAsync();
             return entities.Select(MapToDto);
+        }
+
+        public async Task<PagedResult<TheaterDto>> GetPagedAsync(PagedQuery query)
+        {
+            var q = _db.Theaters.AsNoTracking();
+
+            if (query.Keyword is { } kw)
+                q = q.Where(t => (t.name != null && t.name.Contains(kw)) ||
+                                 (t.location != null && t.location.Contains(kw)));
+
+            var paged = await q.OrderByDescending(t => t.id).ToPagedResultAsync(query);
+            return paged.Map(MapToDto);
         }
 
         public async Task<TheaterDto?> GetByIdAsync(long id)

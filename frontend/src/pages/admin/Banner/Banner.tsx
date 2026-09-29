@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   Button,
@@ -12,34 +12,28 @@ import {
 } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 
+import AddButton from "@/components/AddButton";
 import type { ColumnsType } from "antd/es/table";
 import type { Banner } from "@/types/Banner";
 import { bannerService } from "@/services/bannerService";
+import { usePagedList } from "@/hooks/usePagedList";
 import { Typography, Row, Col, Select, Tag } from "antd";
 
 export default function BannerPage() {
   const { Title } = Typography;
-  const [banners, setBanners] = useState<Banner[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    items: banners,
+    total,
+    loading,
+    reload: fetchBanners,
+    pagination,
+  } = usePagedList(bannerService.getPaged, {
+    initialFilters: {},
+    onError: () => message.error("Không tải được banner"),
+  });
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Banner | null>(null);
   const [form] = Form.useForm();
-
-  const fetchBanners = async () => {
-    setLoading(true);
-    try {
-      const res = await bannerService.getAll();
-      setBanners(res.data.data);
-    } catch {
-      message.error("Không tải được banner");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBanners();
-  }, []);
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
@@ -62,7 +56,7 @@ export default function BannerPage() {
     }
   };
   const displayOrderOptions = Array.from(
-    { length: banners.length + 1 },
+    { length: total + 1 },
     (_, i) => ({
       label: i + 1,
       value: i + 1,
@@ -144,8 +138,7 @@ export default function BannerPage() {
         </Col>
 
         <Col>
-          <Button
-            type="primary"
+          <AddButton
             onClick={() => {
               setEditing(null);
               form.resetFields();
@@ -153,7 +146,7 @@ export default function BannerPage() {
             }}
           >
             Thêm banner
-          </Button>
+          </AddButton>
         </Col>
       </Row>
 
@@ -162,6 +155,7 @@ export default function BannerPage() {
         columns={columns}
         dataSource={banners}
         loading={loading}
+        pagination={pagination}
       />
 
       <Modal

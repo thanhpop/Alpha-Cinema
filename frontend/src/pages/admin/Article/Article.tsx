@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Table,
   Button,
@@ -14,40 +14,33 @@ import {
   Select,
   Switch,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import AddButton from "@/components/AddButton";
 import type { ColumnsType } from "antd/es/table";
 import { articleService } from "@/services/ArticleService";
 import type { Article } from "@/types/Article";
 import QuillEditor from "@/components/QuillEditor";
+import { usePagedList } from "@/hooks/usePagedList";
 
 const { Title } = Typography;
 const { TextArea } = Input;
 
 export default function ArticleManagementPage() {
-  const [data, setData] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    items: data,
+    loading,
+    reload: fetchArticles,
+    pagination,
+  } = usePagedList(articleService.getPaged, {
+    initialFilters: {},
+    onError: () => message.error("Không tải được danh sách bài viết"),
+  });
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Article | null>(null);
   const [content, setContent] = useState("");
 
   const [form] = Form.useForm();
-
-  const fetchArticles = async () => {
-    try {
-      setLoading(true);
-      const res = await articleService.getAll();
-      setData(res.data.data);
-    } catch {
-      message.error("Không tải được danh sách bài viết");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchArticles();
-  }, []);
 
   const openCreate = () => {
     setEditing(null);
@@ -169,9 +162,7 @@ export default function ArticleManagementPage() {
     <>
       <div className="flex justify-between items-center mb-4">
         <Title level={3}>Quản lý bài viết</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Thêm bài viết
-        </Button>
+        <AddButton onClick={openCreate}>Thêm bài viết</AddButton>
       </div>
 
       <Table
@@ -179,7 +170,7 @@ export default function ArticleManagementPage() {
         loading={loading}
         columns={columns}
         dataSource={data}
-        pagination={{ pageSize: 10 }}
+        pagination={pagination}
       />
 
       <Modal

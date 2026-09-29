@@ -1,4 +1,5 @@
-﻿using backend.DTO.Movie;
+﻿using backend.DTO.Common;
+using backend.DTO.Movie;
 using backend.Helpers;
 using backend.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,13 @@ namespace backend.Controllers
         {
             var data = await _service.GetAllAsync();
             return Ok(ApiResponse<IEnumerable<MovieDto>>.Success(data));
+        }
+
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
+        {
+            var data = await _service.GetPagedAsync(query);
+            return Ok(ApiResponse<PagedResult<MovieDto>>.Success(data));
         }
         [AllowAnonymous]
         [HttpGet("{id:long}")]
