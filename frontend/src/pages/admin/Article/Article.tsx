@@ -8,22 +8,17 @@ import {
   message,
   Typography,
   Image,
-  Modal,
   Form,
-  Input,
-  Select,
-  Switch,
 } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import AddButton from "@/components/AddButton";
 import type { ColumnsType } from "antd/es/table";
 import { articleService } from "@/services/ArticleService";
 import type { Article } from "@/types/Article";
-import QuillEditor from "@/components/QuillEditor";
 import { usePagedList } from "@/hooks/usePagedList";
+import ArticleFormModal from "@/pages/admin/Article/components/ArticleFormModal";
 
 const { Title } = Typography;
-const { TextArea } = Input;
 
 export default function ArticleManagementPage() {
   const {
@@ -173,57 +168,15 @@ export default function ArticleManagementPage() {
         pagination={pagination}
       />
 
-      <Modal
+      <ArticleFormModal
         open={open}
-        title={editing ? "Sửa bài viết" : "Thêm bài viết"}
-        width={900}
-        onCancel={() => setOpen(false)}
+        isEditing={!!editing}
+        form={form}
+        content={content}
+        onContentChange={setContent}
         onOk={handleSubmit}
-        okText="Lưu"
-      >
-        <Form layout="vertical" form={form}>
-          <Form.Item name="title" label="Tiêu đề" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="summary"
-            label="Tóm tắt"
-            rules={[{ required: true }]}
-          >
-            <TextArea rows={3} showCount maxLength={300} />
-          </Form.Item>
-
-          <Form.Item
-            name="imageUrl"
-            label="Ảnh đại diện"
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="category"
-            label="Danh mục"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[
-                { label: "Điện ảnh", value: "Movie" },
-                { label: "Khuyến mãi", value: "Promotion" },
-              ]}
-            />
-          </Form.Item>
-
-          <Form.Item name="isActive" label="Trạng thái" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-
-          <Form.Item label="Nội dung bài viết">
-            <QuillEditor value={content} onChange={setContent} />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onCancel={() => setOpen(false)}
+      />
     </>
   );
 }

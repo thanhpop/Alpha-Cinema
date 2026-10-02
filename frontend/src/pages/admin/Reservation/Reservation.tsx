@@ -9,8 +9,6 @@ import {
   Space,
   InputNumber,
   Select,
-  Modal,
-  Descriptions,
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -20,6 +18,7 @@ import type {
   ReservationResponse,
 } from "@/services/reservationService";
 import { usePagedList } from "@/hooks/usePagedList";
+import ReservationDetailModal from "@/pages/admin/Reservation/components/ReservationDetailModal";
 
 import type { Dayjs } from "dayjs";
 
@@ -205,79 +204,11 @@ export default function ReservationPage() {
           pagination={pagination}
         />
       </Spin>
-      <Modal
-        title="Chi tiết đơn đặt vé"
+      <ReservationDetailModal
         open={openDetail}
-        onCancel={() => setOpenDetail(false)}
-        footer={null}
-        width={600}
-      >
-        {selectedReservation && (
-          <Descriptions bordered column={1} size="small">
-            <Descriptions.Item label="ID đơn">
-              {selectedReservation.id}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="ID người dùng">
-              {selectedReservation.userId}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="ID suất chiếu">
-              {selectedReservation.showtimeId}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Thời gian đặt">
-              {selectedReservation.reservationTime}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Suất chiếu">
-              {selectedReservation.showDateTimeText ?? "-"}
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Trạng thái">
-              <Tag
-                color={
-                  selectedReservation.statusValue === "CONFIRMED"
-                    ? "green"
-                    : selectedReservation.statusValue === "PENDING"
-                      ? "orange"
-                      : "red"
-                }
-              >
-                {selectedReservation.statusValue}
-              </Tag>
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Tổng tiền">
-              {selectedReservation.totalPrice.toLocaleString("vi-VN")} đ
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Thanh toán">
-              {selectedReservation.paid ? (
-                <Tag color="green">Đã thanh toán</Tag>
-              ) : (
-                <Tag color="red">Chưa thanh toán</Tag>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="Ghế đã đặt">
-              {selectedReservation.seats?.length ? (
-                <Space wrap>
-                  {selectedReservation.seats.map((seat) => (
-                    <Tag
-                      key={seat.id}
-                      color={seat.isReserved ? "blue" : "default"}
-                    >
-                      {seat.seatNumber}
-                    </Tag>
-                  ))}
-                </Space>
-              ) : (
-                <Tag color="default">Không có ghế</Tag>
-              )}
-            </Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
+        reservation={selectedReservation}
+        onClose={() => setOpenDetail(false)}
+      />
     </div>
   );
 }

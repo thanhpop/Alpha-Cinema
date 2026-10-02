@@ -8,7 +8,6 @@ import type {
 function toAuthResponse(d: any): AuthResponse {
   return {
     accessToken: String(d.accessToken ?? ""),
-    refreshToken: String(d.refreshToken ?? ""),
     userId: Number(d.userId),
     username: String(d.username ?? ""),
     email: String(d.email ?? ""),
@@ -35,19 +34,8 @@ export const authService = {
     };
   },
 
-  async refresh(refreshToken: string): Promise<{
-    accessToken: string;
-    refreshToken: string;
-  }> {
-    const res = await instance.post("/auth/refresh", { refreshToken });
-    if (!res.data?.data) throw new Error("Refresh failed");
-    return {
-      accessToken: res.data.data.accessToken,
-      refreshToken: res.data.data.refreshToken,
-    };
-  },
-
-  async logout(refreshToken: string): Promise<void> {
-    await instance.post("/auth/logout", { refreshToken });
+  // Refresh token nằm trong cookie HttpOnly nên không cần gửi kèm; refresh do axios interceptor tự xử lý
+  async logout(): Promise<void> {
+    await instance.post("/auth/logout");
   },
 };

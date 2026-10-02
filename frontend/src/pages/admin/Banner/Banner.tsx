@@ -1,15 +1,5 @@
 import { useState } from "react";
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Switch,
-  Space,
-  message,
-  Popconfirm,
-} from "antd";
+import { Table, Button, Form, Space, message, Popconfirm } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 
 import AddButton from "@/components/AddButton";
@@ -17,7 +7,8 @@ import type { ColumnsType } from "antd/es/table";
 import type { Banner } from "@/types/Banner";
 import { bannerService } from "@/services/bannerService";
 import { usePagedList } from "@/hooks/usePagedList";
-import { Typography, Row, Col, Select, Tag } from "antd";
+import { Typography, Row, Col, Tag } from "antd";
+import BannerFormModal from "@/pages/admin/Banner/components/BannerFormModal";
 
 export default function BannerPage() {
   const { Title } = Typography;
@@ -55,13 +46,6 @@ export default function BannerPage() {
       message.error("Thao tác thất bại");
     }
   };
-  const displayOrderOptions = Array.from(
-    { length: total + 1 },
-    (_, i) => ({
-      label: i + 1,
-      value: i + 1,
-    }),
-  );
 
   const columns: ColumnsType<Banner> = [
     {
@@ -158,46 +142,14 @@ export default function BannerPage() {
         pagination={pagination}
       />
 
-      <Modal
+      <BannerFormModal
         open={open}
-        title={editing ? "Sửa banner" : "Thêm banner"}
+        isEditing={!!editing}
+        form={form}
+        totalBanners={total}
         onOk={handleSubmit}
         onCancel={() => setOpen(false)}
-      >
-        <Form layout="vertical" form={form}>
-          <Form.Item
-            name="imageUrl"
-            label="Image URL"
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
-
-          <Form.Item name="title" label="Tiêu đề">
-            <Input />
-          </Form.Item>
-
-          <Form.Item
-            name="displayOrder"
-            label="Thứ tự hiển thị"
-            rules={[{ required: true }]}
-          >
-            <Select
-              placeholder="Chọn vị trí hiển thị"
-              options={displayOrderOptions}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="isActive"
-            label="Trạng thái"
-            valuePropName="checked"
-            initialValue={true}
-          >
-            <Switch />
-          </Form.Item>
-        </Form>
-      </Modal>
+      />
     </>
   );
 }

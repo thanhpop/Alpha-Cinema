@@ -4,9 +4,7 @@ import {
   Button,
   Input,
   Space,
-  Modal,
   Form,
-  InputNumber,
   Row,
   Col,
   Typography,
@@ -24,6 +22,8 @@ import type { ColumnsType } from "antd/es/table";
 import type { Theater } from "@/types/Theater";
 import theaterService from "@/services/theaterService";
 import { usePagedList } from "@/hooks/usePagedList";
+import TheaterFormModal from "@/pages/admin/Theater/components/TheaterFormModal";
+import TheaterViewModal from "@/pages/admin/Theater/components/TheaterViewModal";
 
 const { Title } = Typography;
 
@@ -201,73 +201,19 @@ const AdminTheaterPage: React.FC = () => {
         </Spin>
       </Space>
 
-      <Modal
-        title={editing ? "Sửa Rạp" : "Tạo Rạp mới"}
+      <TheaterFormModal
         open={isEditModalVisible}
-        onCancel={closeEditModal}
-        width={700}
-        okText={editing ? "Lưu" : "Tạo"}
+        isEditing={!!editing}
+        form={form}
         onOk={handleSave}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" initialValues={{ capacity: 0 }}>
-          <Form.Item
-            name="name"
-            label="Tên rạp"
-            rules={[{ required: true, message: "Vui lòng nhập tên rạp" }]}
-          >
-            <Input placeholder="" />
-          </Form.Item>
+        onCancel={closeEditModal}
+      />
 
-          <Form.Item
-            name="location"
-            label="Địa điểm"
-            rules={[{ required: true, message: "Vui lòng nhập địa điểm" }]}
-          >
-            <Input placeholder="" />
-          </Form.Item>
-
-          <Form.Item
-            name="capacity"
-            label="Sức chứa"
-            rules={[{ required: true, message: "Vui lòng nhập sức chứa" }]}
-          >
-            <InputNumber style={{ width: "100%" }} min={0} />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title="Chi tiết Rạp"
+      <TheaterViewModal
         open={isViewModalVisible}
-        onCancel={closeViewModal}
-        footer={[
-          <Button key="close" onClick={closeViewModal}>
-            Đóng
-          </Button>,
-        ]}
-      >
-        <Form form={viewForm} layout="vertical">
-          <Form.Item label="ID">
-            <Input
-              readOnly
-              value={String(viewForm.getFieldValue("id") ?? "")}
-            />
-          </Form.Item>
-          <Form.Item label="Tên rạp">
-            <Input readOnly value={viewForm.getFieldValue("name") ?? ""} />
-          </Form.Item>
-          <Form.Item label="Địa điểm">
-            <Input readOnly value={viewForm.getFieldValue("location") ?? ""} />
-          </Form.Item>
-          <Form.Item label="Sức chứa">
-            <Input
-              readOnly
-              value={String(viewForm.getFieldValue("capacity") ?? "")}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+        viewForm={viewForm}
+        onClose={closeViewModal}
+      />
     </>
   );
 };

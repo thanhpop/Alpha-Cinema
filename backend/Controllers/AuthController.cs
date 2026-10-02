@@ -31,26 +31,61 @@ namespace backend.Controller
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
+            var auth = await _auth.LoginAsync(dto);
+            if (auth == null) return NotFound(ApiResponse<object>.Fail("Invalid username/email or password"));
 
+            Response.Cookies.Append(RefreshCookieName, auth.RefreshToken!,
+                RefreshCookieOptions(auth.RefreshTokenExpiresAt));
 
-             var auth = await _auth.LoginAsync(dto);
-             if (auth == null) return NotFound(ApiResponse<object>.Fail("Invalid username/email or password"));
-
-             return Ok(ApiResponse<JwtResponseDto>.Success(auth));
+            return Ok(ApiResponse<JwtResponseDto>.Success(auth));
         }
+
+        // Refresh token đọc từ cookie HttpOnly; frontend giữ access token trong bộ nhớ và gọi lại endpoint này sau khi F5
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshRequestDto dto)
+        public async Task<IActionResult> Refresh()
         {
-            var res = await _auth.RefreshTokenAsync(dto.RefreshToken);
-            if (res == null) return Unauthorized(new { message = "Invalid or expired refresh token" });
+            var refreshToken = Request.Cookies[RefreshCookieName];
+            var res = refreshToken == null ? null : await _auth.RefreshTokenAsync(refreshToken);
+            if (res == null)
+            {
+                Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions());
+                return Unauthorized(new { message = "Invalid or expired refresh token" });
+            }
+
+            // Token đã được rotate: ghi đè cookie bằng refresh token mới
+            if (res.RefreshToken != null)
+            {
+                Response.Cookies.Append(RefreshCookieName, res.RefreshToken,
+                    RefreshCookieOptions(res.RefreshTokenExpiresAt));
+            }
+
             return Ok(ApiResponse<RefreshTokenResponseDto>.Success(res));
         }
+
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] RefreshRequestDto dto)
+        public async Task<IActionResult> Logout()
         {
-            var ok = await _auth.RevokeRefreshTokenAsync(dto.RefreshToken);
-            if (!ok) return NotFound(new { message = "Token not found" });
+            var refreshToken = Request.Cookies[RefreshCookieName];
+            if (refreshToken != null)
+                await _auth.RevokeRefreshTokenAsync(refreshToken);
+
+            Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions());
             return NoContent();
         }
+
+        private const string RefreshCookieName = "refreshToken";
+
+        private CookieOptions RefreshCookieOptions(DateTime? expiresUtc = null) => new()
+        {
+            HttpOnly = true,
+            Secure = Request.IsHttps,
+            // HTTPS: frontend và API có thể khác site nên cần None (bắt buộc đi kèm Secure); HTTP khi dev dùng Lax
+            SameSite = Request.IsHttps ? SameSiteMode.None : SameSiteMode.Lax,
+            // Chỉ gửi cookie cho các endpoint auth
+            Path = "/api/auth",
+            Expires = expiresUtc.HasValue
+                ? new DateTimeOffset(DateTime.SpecifyKind(expiresUtc.Value, DateTimeKind.Utc))
+                : null
+        };
     }
 }

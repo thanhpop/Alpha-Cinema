@@ -4,18 +4,13 @@ import {
   Button,
   Input,
   Space,
-  Modal,
   Form,
-  InputNumber,
   Row,
   Col,
   Typography,
   Popconfirm,
   message,
-  DatePicker,
-  TimePicker,
   Spin,
-  Select,
 } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import AddButton from "@/components/AddButton";
@@ -26,6 +21,7 @@ import { theaterService } from "@/services/theaterService";
 
 import { showtimeService, type Showtime } from "@/services/showtimeService";
 import { usePagedList } from "@/hooks/usePagedList";
+import ShowtimeFormModal from "@/pages/admin/Showtime/components/ShowtimeFormModal";
 
 const { Title } = Typography;
 
@@ -263,119 +259,16 @@ const AdminShowtimeHookPage: React.FC = () => {
         </Spin>
       </Space>
 
-      <Modal
-        title={editing ? `Sửa lịch chiếu ` : "Tạo mới"}
+      <ShowtimeFormModal
         open={isEditModalVisible}
-        onCancel={closeEditModal}
+        isEditing={!!editing}
+        saving={saving}
+        form={form}
+        movies={movies}
+        theaters={theaters}
         onOk={handleSave}
-        confirmLoading={saving}
-        width={720}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item name="movieId" label="Phim" rules={[{ required: true }]}>
-            <Select
-              placeholder="Chọn phim"
-              optionLabelProp="label"
-              showSearch
-              filterOption={(input, option) => {
-                const title = option?.label?.toString().toLowerCase() ?? "";
-                return title.includes(input.toLowerCase());
-              }}
-            >
-              {movies.map((m) => (
-                <Select.Option key={m.id} value={m.id} label={m.title}>
-                  <Space>
-                    <img
-                      src={m.poster || m.image || ""}
-                      alt={m.title}
-                      style={{
-                        width: 75,
-                        height: 100,
-                        objectFit: "cover",
-                        borderRadius: 4,
-                      }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='56'><rect width='100%' height='100%' fill='%23e6e6e6'/></svg>";
-                      }}
-                    />
-                    <span>{m.title}</span>
-                  </Space>
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="theaterId" label="Rạp" rules={[{ required: true }]}>
-            <Select
-              placeholder="Chọn rạp"
-              optionLabelProp="label"
-              showSearch
-              filterOption={(input, option) => {
-                const lab = option?.label?.toString().toLowerCase() ?? "";
-                return lab.includes(input.toLowerCase());
-              }}
-            >
-              {theaters.map((t) => (
-                <Select.Option
-                  key={t.id}
-                  value={t.id}
-                  label={`${t.name} — ${t.location ?? ""}`}
-                >
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontWeight: 600 }}>{t.name}</span>
-                    <span style={{ color: "#888", fontSize: 12 }}>
-                      {t.location}
-                    </span>
-                  </div>
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item
-                name="showDate"
-                label="Ngày chiếu"
-                rules={[{ required: true }]}
-              >
-                <DatePicker style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="showTime"
-                label="Giờ chiếu"
-                rules={[{ required: true }]}
-              >
-                <TimePicker format="HH:mm" style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="price"
-            label="Giá (VNĐ)"
-            rules={[{ required: true }]}
-          >
-            <InputNumber style={{ width: "100%" }} min={0} />
-          </Form.Item>
-
-          <Form.Item
-            name="totalSeats"
-            label="Tổng ghế"
-            rules={[{ required: true, message: "Nhập tổng ghế" }]}
-          >
-            <Select<number> placeholder="Chọn tổng ghế" disabled={!!editing}>
-              <Select.Option value={30}>30</Select.Option>
-              <Select.Option value={40}>40</Select.Option>
-              <Select.Option value={50}>50</Select.Option>
-              <Select.Option value={60}>60</Select.Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
+        onCancel={closeEditModal}
+      />
     </>
   );
 };

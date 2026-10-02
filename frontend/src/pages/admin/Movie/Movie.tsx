@@ -4,16 +4,10 @@ import {
   Button,
   Input,
   Space,
-  Modal,
   Form,
-  InputNumber,
-  Select,
-  DatePicker,
   Row,
   Col,
   Typography,
-  List,
-  Avatar,
   Popconfirm,
   Tag,
   message,
@@ -33,9 +27,11 @@ import type { Movie, ApiMovie } from "@/types/Movie";
 
 import { usePagedList } from "@/hooks/usePagedList";
 import movieService from "@/services/movieService";
+import MovieFormModal from "@/pages/admin/Movie/components/MovieFormModal";
+import MovieViewModal from "@/pages/admin/Movie/components/MovieViewModal";
+import MovieApiSearchModal from "@/pages/admin/Movie/components/MovieApiSearchModal";
 
 const { Title } = Typography;
-const { Option } = Select;
 
 const apiKey = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -446,369 +442,28 @@ const MoviePage: React.FC = () => {
         </Spin>
       </Space>
 
-      {/* Edit / Add Modal */}
-      <Modal
-        title={editingId ? "Sửa Phim" : "Thêm Phim mới"}
+      <MovieFormModal
         open={isEditModalVisible}
-        onCancel={closeEditModal}
-        width={900}
-        okText={editingId ? "Lưu" : "Thêm"}
+        isEditing={!!editingId}
+        form={form}
         onOk={handleSave}
-      >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item shouldUpdate noStyle>
-                {() => {
-                  const src = form.getFieldValue("poster");
-                  return (
-                    <div
-                      style={{
-                        width: "100%",
-                        aspectRatio: "2 / 3",
-                        background: "#f5f5f5",
-                        borderRadius: 8,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <img
-                        src={src}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
-                    </div>
-                  );
-                }}
-              </Form.Item>
-              <div style={{ marginTop: 56 }} />
-              <Form.Item label="Poster (URL)" name="poster">
-                <Input placeholder="URL ảnh poster " />
-              </Form.Item>
-            </Col>
-            <Col span={16}>
-              <Form.Item>
-                <Button type="primary" block onClick={openApiModal}>
-                  Tìm phim từ API
-                </Button>
-              </Form.Item>
+        onCancel={closeEditModal}
+        onOpenApiSearch={openApiModal}
+      />
 
-              <Form.Item
-                label="Tên phim"
-                name="title"
-                rules={[{ required: true, message: "Vui lòng nhập tên phim" }]}
-              >
-                <Input placeholder="Nhập tên phim" />
-              </Form.Item>
-              <Form.Item
-                label="Mô tả"
-                name="overview"
-                rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
-              >
-                <Input.TextArea rows={4} />
-              </Form.Item>
-              <Row gutter={12}>
-                <Col span={12}>
-                  <Form.Item
-                    label="Thời lượng (phút)"
-                    name="duration"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập thời lượng" },
-                    ]}
-                  >
-                    <InputNumber style={{ width: "100%" }} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    label="Ngôn ngữ"
-                    name="language"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập ngôn ngữ" },
-                    ]}
-                  >
-                    <Select placeholder="Chọn ngôn ngữ">
-                      <Option value="Tiếng Anh">Tiếng Anh</Option>
-                      <Option value="Tiếng Việt">Tiếng Việt</Option>
-                      <Option value="Tiếng Nhật">Tiếng Nhật</Option>
-                      <Option value="Tiếng Hàn">Tiếng Hàn</Option>
-                      <Option value="Tiếng Trung">Tiếng Trung</Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item
-                label="Thể loại"
-                name="genres"
-                rules={[{ required: true, message: "Vui lòng nhập thể loại" }]}
-              >
-                <Select
-                  mode="tags"
-                  style={{ width: "100%" }}
-                  placeholder="Thêm hoặc chọn thể loại"
-                />
-              </Form.Item>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    label="Ngày khởi chiếu"
-                    name="releaseDate"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn ngày khởi chiếu",
-                      },
-                    ]}
-                  >
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      format="DD/MM/YYYY"
-                      placeholder="Chọn ngày"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Ngày kết thúc" name="endDate">
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      format="DD/MM/YYYY"
-                      placeholder="Không bắt buộc"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="IMDB ID" name="imdbId">
-                    <Input placeholder="Ví dụ: tt15398776" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="TMDB Film ID" name="filmId">
-                    <Input placeholder="Ví dụ: 872585" />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Form.Item
-                label="Trailer (YouTube URL)"
-                name="trailer"
-                rules={[
-                  {
-                    type: "url",
-                    message: "Trailer phải là URL hợp lệ",
-                  },
-                ]}
-              >
-                <Input placeholder="https://www.youtube.com/watch?v=..." />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
-
-      {/* View detail Modal */}
-      <Modal
-        title="Chi tiết Phim"
+      <MovieViewModal
         open={isViewModalVisible}
-        onCancel={closeViewModal}
-        width={900}
-        footer={[
-          <Button key="close" onClick={closeViewModal}>
-            Đóng
-          </Button>,
-        ]}
-      >
-        <Form form={viewForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item shouldUpdate noStyle>
-                {() => {
-                  const src = viewForm.getFieldValue("poster");
-                  return (
-                    <div
-                      style={{
-                        width: "100%",
-                        aspectRatio: "2 / 3",
-                        background: "#f5f5f5",
-                        borderRadius: 8,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <img
-                        src={src}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
-                    </div>
-                  );
-                }}
-              </Form.Item>
-              <div style={{ marginTop: 16 }} />
-              <Form.Item label="Poster">
-                <Input
-                  readOnly
-                  value={viewForm.getFieldValue("poster") || ""}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={16}>
-              <Form.Item label="Tên phim">
-                <Input readOnly value={viewForm.getFieldValue("title") || ""} />
-              </Form.Item>
+        viewForm={viewForm}
+        onClose={closeViewModal}
+      />
 
-              <Form.Item label="Mô tả">
-                <Input.TextArea
-                  rows={4}
-                  readOnly
-                  value={viewForm.getFieldValue("overview") || ""}
-                />
-              </Form.Item>
-
-              <Row gutter={12}>
-                <Col span={12}>
-                  <Form.Item label="Thời lượng (phút)">
-                    <Input
-                      readOnly
-                      value={(() => {
-                        const v = viewForm.getFieldValue("duration");
-                        return v !== undefined && v !== null ? String(v) : "";
-                      })()}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Ngôn ngữ">
-                    <Input
-                      readOnly
-                      value={viewForm.getFieldValue("language") || ""}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item label="Thể loại">
-                <div>
-                  {Array.isArray(viewForm.getFieldValue("genres")) &&
-                    viewForm.getFieldValue("genres").length > 0 &&
-                    (viewForm.getFieldValue("genres") as string[]).map((g) => (
-                      <Tag key={g}>{g}</Tag>
-                    ))}
-                </div>
-              </Form.Item>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="Ngày khởi chiếu">
-                    <Input
-                      readOnly
-                      value={viewForm.getFieldValue("releaseDate") || ""}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Ngày kết thúc">
-                    <Input
-                      readOnly
-                      placeholder="Chưa xác định"
-                      value={viewForm.getFieldValue("endDate") || ""}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item label="IMDB ID">
-                    <Input
-                      readOnly
-                      value={viewForm.getFieldValue("imdbId") || "N/A"}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item label="Film ID">
-                    <Input
-                      readOnly
-                      value={viewForm.getFieldValue("filmId") || "N/A"}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Form.Item label="Trailer">
-                <Input
-                  readOnly
-                  value={viewForm.getFieldValue("trailer") || ""}
-                />
-              </Form.Item>
-
-              {viewForm.getFieldValue("trailer") && (
-                <div style={{ marginTop: 12 }}>
-                  <iframe
-                    width="100%"
-                    height="315"
-                    src={viewForm
-                      .getFieldValue("trailer")
-                      .replace("watch?v=", "embed/")}
-                    title="Trailer"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    style={{ borderRadius: 8 }}
-                  />
-                </div>
-              )}
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
-
-      {/* API Search Modal */}
-      <Modal
-        title="Tìm phim từ API"
+      <MovieApiSearchModal
         open={isApiModalVisible}
-        footer={null}
-        onCancel={closeApiModal}
-      >
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <Input.Search
-            placeholder="Nhập tên phim API"
-            allowClear
-            enterButton="Tìm"
-            onSearch={handleApiSearch}
-            style={{ width: "100%" }}
-          />
-          <List
-            bordered
-            dataSource={apiResults}
-            renderItem={(item) => (
-              <List.Item
-                onClick={() => handleApiSelect(item)}
-                style={{ cursor: "pointer" }}
-              >
-                <List.Item.Meta
-                  avatar={
-                    <Avatar shape="square" size={100} src={item.Poster} />
-                  }
-                  title={<span style={{ fontWeight: 500 }}>{item.Title}</span>}
-                  description={
-                    <span style={{ fontSize: 12, color: "#888" }}>
-                      {item.Year}
-                    </span>
-                  }
-                />
-              </List.Item>
-            )}
-            style={{ maxHeight: 400, overflowY: "auto" }}
-          />
-        </Space>
-      </Modal>
+        results={apiResults}
+        onSearch={handleApiSearch}
+        onSelect={handleApiSelect}
+        onClose={closeApiModal}
+      />
     </>
   );
 };

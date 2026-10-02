@@ -1,4 +1,6 @@
-﻿namespace backend.DTO.Auth
+﻿using System.Text.Json.Serialization;
+
+namespace backend.DTO.Auth
 {
     public class JwtResponseDto
     {
@@ -8,7 +10,12 @@
 
         public string? Email { get; set; }
 
+        // Refresh token chỉ gửi qua cookie HttpOnly, không trả trong body để JS không đọc được
+        [JsonIgnore]
         public string? RefreshToken { get; set; }
+
+        [JsonIgnore]
+        public DateTime RefreshTokenExpiresAt { get; set; }
 
         public string Role { get; set; } = string.Empty;
     }

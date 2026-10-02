@@ -19,11 +19,15 @@ namespace backend.Service.Implementations
     {
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
+        private readonly ILogger<AuthService> _logger;
         private readonly int _refreshTokenDays = 7;
-        public AuthService(AppDbContext db, IConfiguration config)
+        // Token vừa bị rotate vẫn được chấp nhận trong khoảng này (nhiều tab refresh cùng lúc)
+        private readonly TimeSpan _refreshReuseGrace = TimeSpan.FromSeconds(30);
+        public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger)
         {
             _db = db ?? throw new ArgumentNullException(nameof(db));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _logger = logger;
         }
 
 
@@ -69,14 +73,23 @@ namespace backend.Service.Implementations
 
             var (token, expire) = CreateJwtToken(user);
 
+            var now = DateTime.UtcNow;
+
+            // Dọn các phiên đã hết hạn của user (mỗi lần rotate sinh thêm 1 dòng)
+            await _db.RefreshTokens
+                .Where(r => r.UserId == user.id && r.ExpiryDate < now)
+                .ExecuteDeleteAsync();
+
             var refreshToken = GenerateRefreshToken();
             var refreshEntity = new RefreshToken
             {
                 UserId = user.id,
                 Token = refreshToken,
-                ExpiryDate = DateTime.UtcNow.AddDays(_refreshTokenDays),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                // Mỗi lần đăng nhập là một family mới
+                FamilyId = Guid.NewGuid().ToString("N"),
+                ExpiryDate = now.AddDays(_refreshTokenDays),
+                CreatedAt = now,
+                UpdatedAt = now
             };
 
             _db.RefreshTokens.Add(refreshEntity);
@@ -89,6 +102,7 @@ namespace backend.Service.Implementations
                 Username = user.username,
                 Email = user.email,
                 RefreshToken = refreshToken,
+                RefreshTokenExpiresAt = refreshEntity.ExpiryDate,
                 Role = user.Role?.name ?? string.Empty
             };
 
@@ -103,38 +117,100 @@ namespace backend.Service.Implementations
             return Base64UrlEncoder.Encode(bytes);
         }
 
+        // Rotate: mỗi lần refresh cấp refresh token mới và đánh dấu token cũ đã bị thay thế.
+        // Token cũ bị gửi lại sau khoảng ân hạn => nghi bị đánh cắp, thu hồi cả family.
         public async Task<RefreshTokenResponseDto?> RefreshTokenAsync(string refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return null;
 
-            var refresh = await _db.RefreshTokens
-                .AsTracking()
+            var current = await _db.RefreshTokens
+                .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Token == refreshToken);
 
-            if (refresh == null) return null;
+            // Không còn trong DB: đã logout, family đã bị thu hồi hoặc token không hợp lệ
+            if (current == null) return null;
 
-            if (refresh.ExpiryDate < DateTime.UtcNow)
+            var now = DateTime.UtcNow;
+
+            // Cả family dùng chung hạn tính từ lúc đăng nhập nên hết hạn cùng lúc
+            if (current.ExpiryDate < now)
             {
-                _db.RefreshTokens.Remove(refresh);
-                await _db.SaveChangesAsync();
+                await DeleteFamilyAsync(current.FamilyId);
                 return null;
             }
 
             var user = await _db.Users
-        .Include(u => u.Role)
-        .FirstOrDefaultAsync(u => u.id == refresh.UserId);
-            if (user == null)
+                .AsNoTracking()
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.id == current.UserId);
+            if (user == null) return null;
+
+            if (current.RevokedAt != null)
+                return await HandleRotatedTokenAsync(current, user, now);
+
+            var newToken = GenerateRefreshToken();
+
+            await using var tx = await _db.Database.BeginTransactionAsync();
+
+            // Chỉ cập nhật khi token vẫn còn hiệu lực để 2 request đồng thời không cùng rotate một token
+            var rotated = await _db.RefreshTokens
+                .Where(r => r.Id == current.Id && r.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(r => r.RevokedAt, now)
+                    .SetProperty(r => r.ReplacedByToken, newToken)
+                    .SetProperty(r => r.UpdatedAt, now));
+
+            if (rotated == 0)
             {
-                return null;
+                // Request khác vừa rotate (hoặc logout) trước: đọc lại trạng thái mới nhất
+                await tx.RollbackAsync();
+                var latest = await _db.RefreshTokens
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Id == current.Id);
+                return latest == null ? null : await HandleRotatedTokenAsync(latest, user, now);
             }
 
-            var (accessToken, _) = CreateJwtToken(user);
+            _db.RefreshTokens.Add(new RefreshToken
+            {
+                UserId = current.UserId,
+                Token = newToken,
+                FamilyId = current.FamilyId,
+                // Giữ hạn tính từ lúc đăng nhập: rotate không kéo dài phiên
+                ExpiryDate = current.ExpiryDate,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
 
             return new RefreshTokenResponseDto
             {
-                AccessToken = accessToken
+                AccessToken = CreateJwtToken(user).token,
+                RefreshToken = newToken,
+                RefreshTokenExpiresAt = current.ExpiryDate
             };
         }
+
+        private async Task<RefreshTokenResponseDto?> HandleRotatedTokenAsync(RefreshToken token, User user, DateTime now)
+        {
+            var withinGrace = token.ReplacedByToken != null
+                && token.RevokedAt.HasValue
+                && now - token.RevokedAt.Value <= _refreshReuseGrace;
+
+            // Nhiều tab / request refresh cùng lúc: cookie đã được cập nhật token mới,
+            // chỉ cấp access token và không rotate thêm
+            if (withinGrace)
+                return new RefreshTokenResponseDto { AccessToken = CreateJwtToken(user).token };
+
+            _logger.LogWarning(
+                "Refresh token reuse detected for user {UserId}, revoking token family {FamilyId}",
+                token.UserId, token.FamilyId);
+            await DeleteFamilyAsync(token.FamilyId);
+            return null;
+        }
+
+        private Task<int> DeleteFamilyAsync(string familyId) =>
+            _db.RefreshTokens.Where(r => r.FamilyId == familyId).ExecuteDeleteAsync();
 
 
         private (string token, DateTime expires) CreateJwtToken(User user)
@@ -200,11 +276,13 @@ namespace backend.Service.Implementations
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return false;
 
-            var refresh = await _db.RefreshTokens.FirstOrDefaultAsync(r => r.Token == refreshToken);
+            var refresh = await _db.RefreshTokens
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Token == refreshToken);
             if (refresh == null) return false;
 
-            _db.RefreshTokens.Remove(refresh);
-            await _db.SaveChangesAsync();
+            // Logout: xóa cả family (token hiện tại và các token cũ đã rotate của phiên này)
+            await DeleteFamilyAsync(refresh.FamilyId);
             return true;
         }
 

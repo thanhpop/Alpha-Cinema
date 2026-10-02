@@ -88,11 +88,10 @@ const Auth: React.FC = () => {
         userId: data.userId,
         username: data.username,
         email: data.email,
-        accessToken: data.accessToken,
         role: data.role,
       };
 
-      login(userData);
+      login(userData, data.accessToken);
       if (userData.role === "ADMIN") {
         message.success("Đăng nhập thành công!");
         navigate("/admin", { replace: true });

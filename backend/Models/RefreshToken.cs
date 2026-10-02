@@ -19,6 +19,18 @@ namespace backend.Model
         [Column("expiry_date")]
         public DateTime ExpiryDate { get; set; }
 
+        // Các token sinh ra từ cùng một lần đăng nhập (qua các lần rotate) có chung FamilyId
+        [Required]
+        [Column("family_id")]
+        public string FamilyId { get; set; } = null!;
+
+        // Thời điểm token bị thay bằng token mới khi rotate; null = token đang dùng được
+        [Column("revoked_at")]
+        public DateTime? RevokedAt { get; set; }
+
+        [Column("replaced_by_token")]
+        public string? ReplacedByToken { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
