@@ -87,10 +87,10 @@ namespace backend.Data
                 entity.HasKey(e => e.Id);
                 entity.ToTable("refresh_token");
                 entity.HasIndex(e => e.Token).IsUnique();
-                entity.Property(e => e.Token).HasMaxLength(512).IsRequired();
+                entity.Property(e => e.Token).HasMaxLength(64).IsRequired();
                 entity.Property(e => e.FamilyId).HasMaxLength(64).IsRequired();
                 entity.HasIndex(e => e.FamilyId);
-                entity.Property(e => e.ReplacedByToken).HasMaxLength(512);
+                entity.Property(e => e.ReplacedByToken).HasMaxLength(64);
                 entity.HasOne(e => e.User)
                       .WithMany() // or .WithMany(u => u.RefreshTokens) if you add collection on User
                       .HasForeignKey(e => e.UserId)

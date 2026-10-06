@@ -84,7 +84,7 @@ namespace backend.Service.Implementations
             var refreshEntity = new RefreshToken
             {
                 UserId = user.id,
-                Token = refreshToken,
+                Token = HashRefreshToken(refreshToken),
                 // Mỗi lần đăng nhập là một family mới
                 FamilyId = Guid.NewGuid().ToString("N"),
                 ExpiryDate = now.AddDays(_refreshTokenDays),
@@ -117,15 +117,21 @@ namespace backend.Service.Implementations
             return Base64UrlEncoder.Encode(bytes);
         }
 
+        // Token đã đủ ngẫu nhiên (64 byte) nên SHA-256 là đủ, không cần salt;
+        // hash cố định giúp tra cứu theo index. Hex thường để khớp SHA2() của MySQL trong migration.
+        private static string HashRefreshToken(string token) =>
+            Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
         // Rotate: mỗi lần refresh cấp refresh token mới và đánh dấu token cũ đã bị thay thế.
         // Token cũ bị gửi lại sau khoảng ân hạn => nghi bị đánh cắp, thu hồi cả family.
         public async Task<RefreshTokenResponseDto?> RefreshTokenAsync(string refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return null;
 
+            var tokenHash = HashRefreshToken(refreshToken);
             var current = await _db.RefreshTokens
                 .AsNoTracking()
-                .FirstOrDefaultAsync(r => r.Token == refreshToken);
+                .FirstOrDefaultAsync(r => r.Token == tokenHash);
 
             // Không còn trong DB: đã logout, family đã bị thu hồi hoặc token không hợp lệ
             if (current == null) return null;
@@ -149,6 +155,7 @@ namespace backend.Service.Implementations
                 return await HandleRotatedTokenAsync(current, user, now);
 
             var newToken = GenerateRefreshToken();
+            var newTokenHash = HashRefreshToken(newToken);
 
             await using var tx = await _db.Database.BeginTransactionAsync();
 
@@ -157,7 +164,7 @@ namespace backend.Service.Implementations
                 .Where(r => r.Id == current.Id && r.RevokedAt == null)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(r => r.RevokedAt, now)
-                    .SetProperty(r => r.ReplacedByToken, newToken)
+                    .SetProperty(r => r.ReplacedByToken, newTokenHash)
                     .SetProperty(r => r.UpdatedAt, now));
 
             if (rotated == 0)
@@ -173,7 +180,7 @@ namespace backend.Service.Implementations
             _db.RefreshTokens.Add(new RefreshToken
             {
                 UserId = current.UserId,
-                Token = newToken,
+                Token = newTokenHash,
                 FamilyId = current.FamilyId,
                 // Giữ hạn tính từ lúc đăng nhập: rotate không kéo dài phiên
                 ExpiryDate = current.ExpiryDate,
@@ -276,9 +283,10 @@ namespace backend.Service.Implementations
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return false;
 
+            var tokenHash = HashRefreshToken(refreshToken);
             var refresh = await _db.RefreshTokens
                 .AsNoTracking()
-                .FirstOrDefaultAsync(r => r.Token == refreshToken);
+                .FirstOrDefaultAsync(r => r.Token == tokenHash);
             if (refresh == null) return false;
 
             // Logout: xóa cả family (token hiện tại và các token cũ đã rotate của phiên này)
