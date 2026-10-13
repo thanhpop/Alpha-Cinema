@@ -316,9 +316,16 @@ namespace backend.Service.Implementations
         }
         public async Task<PagedResult<ReservationDto>> GetReservationsByUserAsync(long userId, PagedQuery query)
         {
-            return await _db.Reservations
+            var q = _db.Reservations
                 .AsNoTracking()
-                .Where(r => r.UserId == userId)
+                .Where(r => r.UserId == userId);
+
+            if (query.Keyword is { } kw)
+                q = q.Where(r => r.Id.Contains(kw) ||
+                                 (r.Showtime.Movie.title != null && r.Showtime.Movie.title.Contains(kw)) ||
+                                 (r.Showtime.Theater.name != null && r.Showtime.Theater.name.Contains(kw)));
+
+            return await q
                 .OrderByDescending(r => r.ReservationTime)
                 .Select(ToDtoExpression)
                 .ToPagedResultAsync(query);

@@ -125,7 +125,8 @@ using (var scope = app.Services.CreateScope())
          var connection = db.Database.GetDbConnection();
          logger.LogInformation("Database connected successfully: {Database} @ {DataSource}", connection.Database, connection.DataSource);
 
-        
+         await DbSeeder.SeedAsync(db, logger);
+
     }
     catch (Exception ex)
     {

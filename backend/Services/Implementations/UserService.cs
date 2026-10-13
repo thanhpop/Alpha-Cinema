@@ -60,6 +60,39 @@ namespace backend.Service.Implementations
                 Email = u.email,
             };
         }
+
+        public async Task<UserProfileDto?> GetProfileAsync(long id)
+        {
+            var u = await _db.Set<User>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.id == id);
+
+            return u == null ? null : ToProfileDto(u);
+        }
+
+        public async Task<UserProfileDto?> UpdateProfileAsync(long id, UpdateProfileDto dto)
+        {
+            var u = await _db.Set<User>().FindAsync(id);
+            if (u == null) return null;
+
+            u.phone = string.IsNullOrWhiteSpace(dto.Phone) ? null : dto.Phone.Trim();
+            u.gender = string.IsNullOrWhiteSpace(dto.Gender) ? null : dto.Gender;
+            u.dateOfBirth = dto.DateOfBirth?.Date;
+
+            await _db.SaveChangesAsync();
+            return ToProfileDto(u);
+        }
+
+        private static UserProfileDto ToProfileDto(User u) => new()
+        {
+            Id = u.id,
+            Username = u.username,
+            Email = u.email,
+            Phone = u.phone,
+            Gender = u.gender,
+            DateOfBirth = u.dateOfBirth,
+        };
+
         public async Task<bool> DeleteAsync(long id)
         {
             var user = await _db.Set<User>().FindAsync(id);

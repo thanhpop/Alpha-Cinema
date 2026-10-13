@@ -15,6 +15,8 @@ import {
   Row,
   Col,
   Statistic,
+  Select,
+  DatePicker,
 } from "antd";
 import {
   UserOutlined,
@@ -22,9 +24,15 @@ import {
   MailOutlined,
   SaveOutlined,
   DollarOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 import type { TabsProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import axios from "axios";
+import dayjs, { type Dayjs } from "dayjs";
+
+import { userService } from "@/services/userService";
+import type { Gender, UserProfile } from "@/services/userService";
 
 import { reservationService } from "@/services/reservationService";
 import type {
@@ -36,13 +44,37 @@ import { usePagedList } from "@/hooks/usePagedList";
 const { Content } = Layout;
 const { Title, Text } = Typography;
 
-interface UserData {
-  userId: number;
+interface ProfileFormValues {
   username: string;
   email: string;
-  fullName?: string;
   phone?: string;
+  gender?: Gender;
+  dateOfBirth?: Dayjs | null;
 }
+
+const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: "male", label: "Nam" },
+  { value: "female", label: "Nữ" },
+  { value: "other", label: "Khác" },
+];
+
+const PHONE_PATTERN = /^(0|\+84)\d{9}$/;
+
+const toFormValues = (u: UserProfile): ProfileFormValues => ({
+  username: u.username,
+  email: u.email,
+  phone: u.phone ?? "",
+  gender: u.gender ?? undefined,
+  dateOfBirth: u.dateOfBirthIso ? dayjs(u.dateOfBirthIso) : null,
+});
+
+// Lỗi validate của ASP.NET trả về dạng { errors: { Field: [msg] } }, lỗi nghiệp vụ trả về { message }
+const getErrorMessage = (err: unknown, fallback: string) => {
+  if (!axios.isAxiosError(err)) return fallback;
+  const data = err.response?.data;
+  const firstValidationError = Object.values(data?.errors ?? {}).flat()[0];
+  return (firstValidationError as string) || data?.message || fallback;
+};
 
 interface BookingHistory {
   key: string;
@@ -57,14 +89,15 @@ interface BookingHistory {
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<UserData | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const {
     items: reservations,
     loading: historyLoading,
     pagination,
+    setFilters,
   } = usePagedList(reservationService.getMyReservations, {
-    initialFilters: {},
+    initialFilters: { search: "" },
     initialPageSize: 5,
     onError: () => message.error("Không thể tải lịch sử đặt vé"),
   });
@@ -87,26 +120,40 @@ const ProfilePage: React.FC = () => {
       return;
     }
 
-    const parsedUser = JSON.parse(userStr);
-    setUser({
-      ...parsedUser,
-      fullName: parsedUser.fullName || "",
-      phone: parsedUser.phone || "",
-    });
+    userService
+      .getMe()
+      .then(setUser)
+      .catch(() => {
+        // Vẫn hiển thị trang bằng thông tin đăng nhập nếu không tải được hồ sơ
+        message.error("Không thể tải thông tin cá nhân");
+        const stored = JSON.parse(userStr);
+        setUser({
+          id: stored.userId,
+          username: stored.username,
+          email: stored.email,
+          phone: null,
+          gender: null,
+          dateOfBirth: null,
+          dateOfBirthIso: null,
+        });
+      });
   }, [navigate]);
 
-  const onFinishUpdateProfile = (values: any) => {
+  const onFinishUpdateProfile = async (values: ProfileFormValues) => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setUser((prev) => ({ ...prev!, ...values }));
-      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ ...currentUser, ...values }),
-      );
+    try {
+      const updated = await userService.updateMe({
+        phone: values.phone?.trim() || null,
+        gender: values.gender ?? null,
+        dateOfBirth: values.dateOfBirth?.format("YYYY-MM-DD") ?? null,
+      });
+      setUser(updated);
       message.success("Cập nhật thông tin thành công!");
-    }, 1000);
+    } catch (err) {
+      message.error(getErrorMessage(err, "Cập nhật thông tin thất bại"));
+    } finally {
+      setLoading(false);
+    }
   };
   const mapReservationToHistory = (
     reservations: ReservationResponse[],
@@ -193,11 +240,11 @@ const ProfilePage: React.FC = () => {
         </span>
       ),
       children: (
-        <Form
+        <Form<ProfileFormValues>
           layout="vertical"
-          initialValues={user || {}}
+          initialValues={user ? toFormValues(user) : {}}
           onFinish={onFinishUpdateProfile}
-          key={user?.email}
+          key={user?.id}
         >
           <Row gutter={24}>
             <Col span={24} md={12}>
@@ -215,6 +262,39 @@ const ProfilePage: React.FC = () => {
                   prefix={<MailOutlined />}
                   disabled
                   className="bg-gray-50"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={24} md={12}>
+              <Form.Item
+                label="Số điện thoại"
+                name="phone"
+                rules={[
+                  {
+                    pattern: PHONE_PATTERN,
+                    message: "Số điện thoại không hợp lệ (VD: 0912345678)",
+                  },
+                ]}
+              >
+                <Input prefix={<PhoneOutlined />} placeholder="VD: 0912345678" />
+              </Form.Item>
+            </Col>
+            <Col span={24} md={12}>
+              <Form.Item label="Giới tính" name="gender">
+                <Select
+                  placeholder="Chọn giới tính"
+                  options={GENDER_OPTIONS}
+                  allowClear
+                />
+              </Form.Item>
+            </Col>
+            <Col span={24} md={12}>
+              <Form.Item label="Ngày sinh" name="dateOfBirth">
+                <DatePicker
+                  className="w-full"
+                  format="DD/MM/YYYY"
+                  placeholder="Chọn ngày sinh"
+                  disabledDate={(d) => d.isAfter(dayjs(), "day")}
                 />
               </Form.Item>
             </Col>
@@ -240,12 +320,21 @@ const ProfilePage: React.FC = () => {
         </span>
       ),
       children: (
-        <Table
-          columns={columns}
-          dataSource={bookingHistory}
-          loading={historyLoading}
-          pagination={pagination}
-        />
+        <>
+          <Input.Search
+            placeholder="Tìm theo tên phim, rạp hoặc mã đặt vé"
+            allowClear
+            enterButton
+            onSearch={(v) => setFilters({ search: v })}
+            className="mb-4 max-w-md"
+          />
+          <Table
+            columns={columns}
+            dataSource={bookingHistory}
+            loading={historyLoading}
+            pagination={pagination}
+          />
+        </>
       ),
     },
   ];

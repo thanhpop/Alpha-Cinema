@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Layout, Button, Carousel, Tabs, Card, Modal } from "antd";
+import {
+  Layout,
+  Button,
+  Carousel,
+  Tabs,
+  Card,
+  Modal,
+  Spin,
+} from "antd";
 import { PlayCircleOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import type { TabsProps } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +16,7 @@ import { useEffect } from "react";
 import { showtimeService } from "@/services/showtimeService";
 import movieService from "@/services/movieService";
 import type { Banner } from "@/types/Banner";
+import type { Movie } from "@/types/Movie";
 import { bannerService } from "@/services/bannerService";
 
 const { Content } = Layout;
@@ -22,6 +31,26 @@ interface HomeMovie {
   trailer?: string;
 }
 
+const toHomeMovie = (m: Movie): HomeMovie => ({
+  id: m.id,
+  title: m.title,
+  image: m.poster || "https://placehold.co/400x600?text=No+Image",
+  genre: m.genres?.join(", ") || "N/A",
+  duration: m.duration ? `${m.duration} phút` : "N/A",
+  trailer: m.trailer,
+});
+
+const getEmbedUrl = (url?: string) => {
+  if (!url) return "";
+  const match = url.match(
+    /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+  );
+  if (match && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}?autoplay=1`;
+  }
+  return url;
+};
+
 const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
   movie,
   isComingSoon,
@@ -30,14 +59,6 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleDetailClick = () => {
     navigate(`/movie/${movie.id}`);
-  };
-  const getEmbedUrl = (url?: string) => {
-    if (!url) return "";
-    const videoId = url.includes("youtube.com")
-      ? new URL(url).searchParams.get("v")
-      : url.split("/").pop();
-
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1`;
   };
 
   return (
@@ -58,14 +79,19 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
           />
 
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 flex flex-col items-center justify-center gap-3 transition-all duration-300">
-            <Button
-              type="primary"
-              shape="round"
-              icon={<PlayCircleOutlined />}
-              className="opacity-0 group-hover:opacity-100 bg-blue-600 border-blue-600 hover:!bg-blue-500 hover:!border-blue-500 font-bold shadow-lg min-w-[140px] transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
-            >
-              {isComingSoon ? "Xem Trailer" : "Mua Vé"}
-            </Button>
+            {(!isComingSoon || movie.trailer) && (
+              <Button
+                type="primary"
+                shape="round"
+                icon={<PlayCircleOutlined />}
+                onClick={
+                  isComingSoon ? () => setIsModalOpen(true) : handleDetailClick
+                }
+                className="opacity-0 group-hover:opacity-100 bg-blue-600 border-blue-600 hover:!bg-blue-500 hover:!border-blue-500 font-bold shadow-lg min-w-[140px] transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
+              >
+                {isComingSoon ? "Xem Trailer" : "Mua Vé"}
+              </Button>
+            )}
 
             {!isComingSoon && (
               <Button
@@ -130,79 +156,75 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
   );
 };
 
+const MovieGrid: React.FC<{
+  movies: HomeMovie[];
+  loading: boolean;
+  error: boolean;
+  emptyText: string;
+  isComingSoon?: boolean;
+}> = ({ movies, loading, error, emptyText, isComingSoon }) => {
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error || movies.length === 0) {
+    return (
+      <p className="py-16 text-center text-gray-500">
+        {error ? "Không tải được danh sách phim, vui lòng thử lại sau" : emptyText}
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 py-4">
+      {movies.map((movie) => (
+        <MovieCard key={movie.id} movie={movie} isComingSoon={isComingSoon} />
+      ))}
+    </div>
+  );
+};
+
 const HomePage: React.FC = () => {
   const [nowShowing, setNowShowing] = useState<HomeMovie[]>([]);
   const [comingSoonMovies, setComingSoonMovies] = useState<HomeMovie[]>([]);
+  const [moviesLoading, setMoviesLoading] = useState(true);
+  const [moviesError, setMoviesError] = useState(false);
   const [banners, setBanners] = useState<Banner[]>([]);
 
   useEffect(() => {
-    const loadNowShowing = async () => {
+    const loadMovies = async () => {
       try {
-        const showtimes = await showtimeService.getAvailable();
+        const [availableShowtimes, upcomingShowtimes] = await Promise.all([
+          showtimeService.getAvailable(),
+          showtimeService.getUpcoming(),
+        ]);
 
-        const movieIdSet = new Set(showtimes.map((s) => s.movieId));
+        const nowShowingIds = new Set(availableShowtimes.map((s) => s.movieId));
+        const comingSoonIds = new Set(upcomingShowtimes.map((s) => s.movieId));
 
-        if (movieIdSet.size === 0) {
-          setNowShowing([]);
-          return;
-        }
+        if (nowShowingIds.size === 0 && comingSoonIds.size === 0) return;
 
         const allMovies = await movieService.getMovies();
 
-        const showingMovies = allMovies.filter((m) => movieIdSet.has(m.id));
-
-        const mapped: HomeMovie[] = showingMovies.map((m) => ({
-          id: m.id,
-          title: m.title,
-          image: m.poster || "https://placehold.co/400x600?text=No+Image",
-          genre: m.genres?.join(", ") || "N/A",
-          duration: m.duration ? `${m.duration} phút` : "N/A",
-          trailer: m.trailer,
-        }));
-
-        setNowShowing(mapped);
+        setNowShowing(
+          allMovies.filter((m) => nowShowingIds.has(m.id)).map(toHomeMovie)
+        );
+        setComingSoonMovies(
+          allMovies.filter((m) => comingSoonIds.has(m.id)).map(toHomeMovie)
+        );
       } catch (err) {
-        console.error("Load now showing failed", err);
-        setNowShowing([]);
+        console.error("Load movies failed", err);
+        setMoviesError(true);
       } finally {
+        setMoviesLoading(false);
       }
     };
 
-    loadNowShowing();
-  }, []);
-
-  useEffect(() => {
-    const loadComingSoon = async () => {
-      try {
-        const upcomingShowtimes = await showtimeService.getUpcoming();
-
-        const movieIdSet = new Set(upcomingShowtimes.map((s) => s.movieId));
-
-        if (movieIdSet.size === 0) {
-          setComingSoonMovies([]);
-          return;
-        }
-
-        const allMovies = await movieService.getMovies();
-
-        const comingMovies = allMovies.filter((m) => movieIdSet.has(m.id));
-
-        const mapped: HomeMovie[] = comingMovies.map((m) => ({
-          id: m.id,
-          title: m.title,
-          image: m.poster || "https://placehold.co/400x600?text=No+Image",
-          genre: m.genres?.join(", ") || "N/A",
-          duration: m.duration ? `${m.duration} phút` : "N/A",
-        }));
-
-        setComingSoonMovies(mapped);
-      } catch (err) {
-        console.error("Load coming soon failed", err);
-        setComingSoonMovies([]);
-      }
-    };
-
-    loadComingSoon();
+    loadMovies();
   }, []);
 
   useEffect(() => {
@@ -229,44 +251,49 @@ const HomePage: React.FC = () => {
       key: "1",
       label: <span className="text-lg font-bold px-6">PHIM ĐANG CHIẾU</span>,
       children: (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 py-4">
-          {nowShowing.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} />
-          ))}
-        </div>
+        <MovieGrid
+          movies={nowShowing}
+          loading={moviesLoading}
+          error={moviesError}
+          emptyText="Hiện chưa có phim đang chiếu"
+        />
       ),
     },
     {
       key: "2",
       label: <span className="text-lg font-bold px-6">PHIM SẮP CHIẾU</span>,
       children: (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 py-4">
-          {comingSoonMovies.map((movie) => (
-            <MovieCard key={movie.id} movie={movie} isComingSoon />
-          ))}
-        </div>
+        <MovieGrid
+          movies={comingSoonMovies}
+          loading={moviesLoading}
+          error={moviesError}
+          emptyText="Chưa có phim sắp chiếu"
+          isComingSoon
+        />
       ),
     },
   ];
 
   return (
     <Content>
-      <div className="relative">
-        <Carousel autoplay effect="fade" autoplaySpeed={5000}>
-          {banners.map((banner) => (
-            <div
-              key={banner.id}
-              className="h-[400px] md:h-[550px] w-full relative"
-            >
-              <img
-                src={banner.imageUrl}
-                alt={banner.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
-        </Carousel>
-      </div>
+      {banners.length > 0 && (
+        <div className="relative">
+          <Carousel autoplay effect="fade" autoplaySpeed={5000}>
+            {banners.map((banner) => (
+              <div
+                key={banner.id}
+                className="h-[400px] md:h-[550px] w-full relative"
+              >
+                <img
+                  src={banner.imageUrl}
+                  alt={banner.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+          </Carousel>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="mt-4">

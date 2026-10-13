@@ -37,6 +37,30 @@ namespace backend.Controller
         }
 
 
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            var userId = User.GetUserId();
+            if (userId == null)
+                return Unauthorized(ApiResponse<string>.Fail("Invalid token", 401));
+
+            var profile = await _service.GetProfileAsync(userId.Value);
+            if (profile == null) return NotFound(ApiResponse<string>.Fail("User not found", 404));
+            return Ok(ApiResponse<UserProfileDto>.Success(profile));
+        }
+
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateMyProfile(UpdateProfileDto dto)
+        {
+            var userId = User.GetUserId();
+            if (userId == null)
+                return Unauthorized(ApiResponse<string>.Fail("Invalid token", 401));
+
+            var profile = await _service.UpdateProfileAsync(userId.Value, dto);
+            if (profile == null) return NotFound(ApiResponse<string>.Fail("User not found", 404));
+            return Ok(ApiResponse<UserProfileDto>.Success(profile, "Cập nhật thông tin thành công"));
+        }
+
         [HttpGet("{id:long}")]
         public async Task<IActionResult> GetById(long id)
         {

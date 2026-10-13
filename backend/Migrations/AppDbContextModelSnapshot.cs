@@ -401,13 +401,27 @@ namespace backend.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("id"));
 
+                    b.Property<DateTime?>("dateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("date_of_birth");
+
                     b.Property<string>("email")
                         .HasColumnType("longtext")
                         .HasColumnName("email");
 
+                    b.Property<string>("gender")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("gender");
+
                     b.Property<string>("password")
                         .HasColumnType("longtext")
                         .HasColumnName("password");
+
+                    b.Property<string>("phone")
+                        .HasMaxLength(15)
+                        .HasColumnType("varchar(15)")
+                        .HasColumnName("phone");
 
                     b.Property<long>("role_id")
                         .HasColumnType("bigint")

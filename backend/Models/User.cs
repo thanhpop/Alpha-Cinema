@@ -16,6 +16,17 @@ namespace backend.Model
         [Column("password")]
         public string? password { get; set; }
 
+        [Column("phone")]
+        [MaxLength(15)]
+        public string? phone { get; set; }
+
+        [Column("gender")]
+        [MaxLength(10)]
+        public string? gender { get; set; }
+
+        [Column("date_of_birth", TypeName = "date")]
+        public DateTime? dateOfBirth { get; set; }
+
         [Column("role_id")]
         [ForeignKey("Role")]
         public long role_id { get; set; }
