@@ -9,7 +9,7 @@ namespace backend.Service.Interfaces
         Task<PagedResult<ShowtimeDto>> GetPagedAsync(PagedQuery query);
         Task<IEnumerable<ShowtimeDto>> GetByMovieAsync(long movieId);
         Task<IEnumerable<ShowtimeDto>> GetByTheaterAsync(long theaterId);
-        Task<ShowtimeDto?> GetByIdAsync(long id);
+        Task<ShowtimeDto> GetByIdAsync(long id);
 
         Task<IEnumerable<ShowtimeDto>> GetShowtimesByDateAsync(DateTime date);
 
@@ -19,7 +19,7 @@ namespace backend.Service.Interfaces
         Task<IEnumerable<ShowtimeDto>> GetUpcomingShowtimesAsync();
         Task<IEnumerable<ShowtimeDto>> GetUpcomingShowtimesByMovieAsync(long movieId);
         Task<ShowtimeDto> CreateAsync(ShowtimeDto dto);
-        Task<ShowtimeDto?> UpdateAsync(long id, ShowtimeDto dto);
-        Task<bool> DeleteAsync(long id);
+        Task<ShowtimeDto> UpdateAsync(long id, ShowtimeDto dto);
+        Task DeleteAsync(long id);
     }
 }

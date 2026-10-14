@@ -8,9 +8,9 @@ namespace backend.Service.Interfaces
         Task<List<ArticlesDto>> GetAllAsync();
         Task<PagedResult<ArticlesDto>> GetPagedAsync(PagedQuery query);
         Task<List<ArticlesDto>> GetActiveAsync();
-        Task<ArticlesDto?> GetByIdAsync(int id);
+        Task<ArticlesDto> GetByIdAsync(int id);
         Task<ArticlesDto> CreateAsync(ArticlesDto dto);
-        Task<ArticlesDto?> UpdateAsync(int id, ArticlesDto dto);
-        Task<bool> DeleteAsync(int id);
+        Task<ArticlesDto> UpdateAsync(int id, ArticlesDto dto);
+        Task DeleteAsync(int id);
     }
 }

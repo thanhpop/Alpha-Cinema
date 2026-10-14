@@ -12,10 +12,10 @@ namespace backend.DTO.Showtime
 
         public long Id { get; set; }
 
-        [Required(ErrorMessage = "MovieId is required.")]
+        [Required(ErrorMessage = "Vui lòng chọn phim.")]
         public long MovieId { get; set; }
 
-        [Required(ErrorMessage = "TheaterId is required.")]
+        [Required(ErrorMessage = "Vui lòng chọn rạp.")]
         public long TheaterId { get; set; }
 
         [JsonConverter(typeof(VnDateJsonConverter))]

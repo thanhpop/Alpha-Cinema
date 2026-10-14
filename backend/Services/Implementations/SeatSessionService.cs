@@ -1,4 +1,5 @@
 ﻿using backend.Data;
+using backend.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using System.Text.Json;
@@ -26,13 +27,13 @@ public class SeatSessionService
     private string IndexKey(long showtimeId)
         => $"seat-index:{showtimeId}";
 
-    public async Task<bool> CreateAsync(SeatSession session)
+    public async Task CreateAsync(SeatSession session)
     {
         var showtimeExists = await _context.Showtimes
             .AnyAsync(x => x.Id == session.ShowtimeId);
 
         if (!showtimeExists)
-            return false;
+            throw new NotFoundException("Không tìm thấy suất chiếu.");
 
         var key = SessionKey(session.ShowtimeId, session.UserId);
 
@@ -55,7 +56,7 @@ public class SeatSessionService
             else
             {
 
-                return true;
+                return;
             }
         }
 
@@ -76,8 +77,6 @@ public class SeatSessionService
             IndexKey(session.ShowtimeId),
             session.UserId
         );
-
-        return true;
     }
 
 
@@ -89,30 +88,31 @@ public class SeatSessionService
         return JsonSerializer.Deserialize<SeatSession>(value!);
     }
 
+    public async Task<SeatSession> GetRequiredAsync(long showtimeId, long userId) =>
+        await GetAsync(showtimeId, userId) ?? throw SessionExpired();
+
 
     public async Task AddSeatsAsync(long showtimeId, int userId, List<long> seatIds)
     {
         var key = SessionKey(showtimeId, userId);
 
-        var session = await GetAsync(showtimeId, userId);
-        if (session == null)
-            throw new Exception("Seat session expired or not found.");
+        var session = await GetRequiredAsync(showtimeId, userId);
 
         if (seatIds == null || !seatIds.Any())
-            throw new Exception("Seat list cannot be empty.");
+            throw new BadRequestException("Vui lòng chọn ít nhất một ghế.");
 
         var seatsInDb = await _context.Seats
             .Where(s => seatIds.Contains(s.Id))
             .ToListAsync();
 
         if (seatsInDb.Count != seatIds.Count)
-            throw new Exception("Seats do not exist.");
+            throw new NotFoundException("Không tìm thấy ghế.");
 
         if (seatsInDb.Any(s => s.ShowtimeId != showtimeId))
-            throw new Exception("Seats do not belong to this showtime.");
+            throw new BadRequestException("Ghế không thuộc suất chiếu này.");
 
         if (seatsInDb.Any(s => s.IsReserved))
-            throw new Exception("Seats are already reserved.");
+            throw new ConflictException("Ghế đã có người đặt.");
 
         foreach (var seatId in seatIds)
         {
@@ -124,7 +124,7 @@ public class SeatSessionService
         var ttl = await _redis.KeyTimeToLiveAsync(key);
 
         if (ttl == null)
-            throw new Exception("Session expired.");
+            throw SessionExpired();
 
         await _redis.StringSetAsync(key, json, ttl.Value);
 
@@ -147,7 +147,7 @@ public class SeatSessionService
         var ttl = await _redis.KeyTimeToLiveAsync(key);
 
         if (ttl == null)
-            throw new Exception("Session expired.");
+            throw SessionExpired();
 
         await _redis.StringSetAsync(key, json, ttl.Value);
 
@@ -203,17 +203,11 @@ public class SeatSessionService
 
         return (int)ttl.Value.TotalSeconds;
     }
-    public async Task<bool> ExtendTtlAsync(long showtimeId, long userId, int minutes)
+    public async Task ExtendTtlAsync(long showtimeId, long userId, int minutes)
     {
         var key = SessionKey(showtimeId, userId);
 
-        var exists = await _redis.KeyExistsAsync(key);
-        if (!exists)
-            return false;
-
-        var session = await GetAsync(showtimeId, userId);
-        if (session == null)
-            return false;
+        var session = await GetRequiredAsync(showtimeId, userId);
 
         var newExpire = DateTime.UtcNow.AddMinutes(minutes);
         session.ExpireAt = newExpire;
@@ -225,15 +219,16 @@ public class SeatSessionService
             json,
             TimeSpan.FromMinutes(minutes)
         );
-
-        return true;
     }
+
+    private static NotFoundException SessionExpired() =>
+        new("Phiên giữ ghế đã hết hạn, vui lòng chọn lại ghế.");
 
 
     private async Task PublishSeatUpdate(long showtimeId)
     {
         await _subscriber.PublishAsync(
-            "seat-updated",
+            RedisChannel.Literal("seat-updated"),
             showtimeId.ToString()
         );
     }

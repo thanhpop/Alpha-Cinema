@@ -40,9 +40,6 @@ namespace backend.Controllers
         public async Task<IActionResult> Get(long id)
         {
             var item = await _service.GetByIdAsync(id);
-            if (item == null)
-                return NotFound(ApiResponse<TheaterDto>.Fail("Not found", 404));
-
             return Ok(ApiResponse<TheaterDto>.Success(item));
         }
         [AllowAnonymous]
@@ -56,8 +53,6 @@ namespace backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] TheaterDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
             var created = await _service.CreateAsync(dto);
             return CreatedAtAction(nameof(Get),
                 new { id = created.Id },
@@ -68,18 +63,13 @@ namespace backend.Controllers
         public async Task<IActionResult> Update(long id, [FromBody] TheaterDto dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
-            if (updated == null)
-                return NotFound(ApiResponse<TheaterDto>.Fail("Not found", 404));
-
             return Ok(ApiResponse<TheaterDto>.Success(updated, "Updated successfully"));
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(long id)
         {
-            var ok = await _service.DeleteAsync(id);
-            if (!ok) return NotFound();
-
+            await _service.DeleteAsync(id);
             return NoContent();
         }
     }

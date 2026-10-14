@@ -38,7 +38,6 @@ namespace backend.Controllers
         }
         [AllowAnonymous]
         [HttpGet("{id:long}")]
-        //[Authorize]
         public async Task<IActionResult> GetById(long id)
         {
             var item = await _service.GetByIdAsync(id);
@@ -46,7 +45,6 @@ namespace backend.Controllers
         }
         [AllowAnonymous]
         [HttpGet("movie/{movieId:long}")]
-        //[Authorize]
         public async Task<IActionResult> GetByMovie(long movieId)
         {
             var items = await _service.GetByMovieAsync(movieId);
@@ -54,7 +52,6 @@ namespace backend.Controllers
         }
         [AllowAnonymous]
         [HttpGet("theater/{theaterId:long}")]
-        //[Authorize]
         public async Task<IActionResult> GetByTheater(long theaterId)
         {
             var items = await _service.GetByTheaterAsync(theaterId);
@@ -62,7 +59,6 @@ namespace backend.Controllers
         }
         [AllowAnonymous]
         [HttpGet("date")]
-        //[Authorize]
         public async Task<IActionResult> GetByDate([FromQuery] DateTime date)
         {
             var items = await _service.GetShowtimesByDateAsync(date);
@@ -80,7 +76,6 @@ namespace backend.Controllers
 
         [AllowAnonymous]
         [HttpGet("available/movies/{movieId:long}")]
-        //[Authorize]
         public async Task<IActionResult> GetAvailableForMovie([FromRoute] long movieId, [FromQuery] DateTime? date)
         {
             var searchDate = (date ?? DateTimeHelper.Today).Date;
@@ -127,7 +122,7 @@ namespace backend.Controllers
         //[Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Delete(long id)
         {
-              var ok = await _service.DeleteAsync(id);
+              await _service.DeleteAsync(id);
               return Ok(ApiResponse<object>.Success(null, "Showtime and its seats deleted", 200));
 
         }

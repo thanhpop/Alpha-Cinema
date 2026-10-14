@@ -5,8 +5,8 @@ public interface IMovieService
 {
     Task<IEnumerable<MovieDto>> GetAllAsync();
     Task<PagedResult<MovieDto>> GetPagedAsync(PagedQuery query);
-    Task<MovieDto?> GetByIdAsync(long id);
+    Task<MovieDto> GetByIdAsync(long id);
     Task<MovieDto> CreateAsync(MovieDto dto);
-    Task<MovieDto?> UpdateAsync(long id, MovieDto dto);
-    Task<bool> DeleteAsync(long id);
+    Task<MovieDto> UpdateAsync(long id, MovieDto dto);
+    Task DeleteAsync(long id);
 }

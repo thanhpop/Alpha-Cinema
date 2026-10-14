@@ -2,6 +2,7 @@
 using backend.Helpers;
 using backend.Data;
 using backend.DTO.Movie;
+using backend.Exceptions;
 using backend.Model;
 using backend.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -30,12 +31,13 @@ namespace backend.Services.Implementations
             return paged.Map(MapToDto);
         }
 
-        public async Task<MovieDto?> GetByIdAsync(long id)
+        public async Task<MovieDto> GetByIdAsync(long id)
         {
             var entity = await _db.Movies.AsNoTracking()
-                .FirstOrDefaultAsync(m => m.id == id);
+                .FirstOrDefaultAsync(m => m.id == id)
+                ?? throw MovieNotFound();
 
-            return entity == null ? null : MapToDto(entity);
+            return MapToDto(entity);
         }
 
         public async Task<MovieDto> CreateAsync(MovieDto dto)
@@ -48,10 +50,9 @@ namespace backend.Services.Implementations
             return MapToDto(entity);
         }
 
-        public async Task<MovieDto?> UpdateAsync(long id, MovieDto dto)
+        public async Task<MovieDto> UpdateAsync(long id, MovieDto dto)
         {
-            var existing = await _db.Movies.FindAsync(id);
-            if (existing == null) return null;
+            var existing = await _db.Movies.FindAsync(id) ?? throw MovieNotFound();
 
             existing.title = dto.Title;
             existing.poster = dto.Poster;
@@ -69,15 +70,16 @@ namespace backend.Services.Implementations
             return MapToDto(existing);
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task DeleteAsync(long id)
         {
-            var existing = await _db.Movies.FindAsync(id);
-            if (existing == null) return false;
+            var existing = await _db.Movies.FindAsync(id) ?? throw MovieNotFound();
 
             _db.Movies.Remove(existing);
             await _db.SaveChangesAsync();
-            return true;
         }
+
+        private static NotFoundException MovieNotFound() => new("Không tìm thấy phim.");
+
         private static MovieDto MapToDto(Movie m)
         {
             return new MovieDto

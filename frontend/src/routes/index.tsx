@@ -43,16 +43,18 @@ const AppRoutes: React.FC = () => {
       </Route>
       <Route path="/paymentResult" element={<PaymentResult />} />
 
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="movie" element={<MoviePage />} />
-        <Route path="theater" element={<TheaterPage />} />
-        <Route path="showtime" element={<Showtime />} />
-        <Route path="reservations" element={<ReservationPage />} />
-        <Route path="users" element={<UserManagementPage />} />
-        <Route path="banner" element={<BannerPage />} />
-        <Route path="news" element={<NewsManagementPage />} />
-        <Route path="dashboard" element={<AdminDashboard />} />
+      <Route element={<ProtectedRoute role="ADMIN" />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="movie" element={<MoviePage />} />
+          <Route path="theater" element={<TheaterPage />} />
+          <Route path="showtime" element={<Showtime />} />
+          <Route path="reservations" element={<ReservationPage />} />
+          <Route path="users" element={<UserManagementPage />} />
+          <Route path="banner" element={<BannerPage />} />
+          <Route path="news" element={<NewsManagementPage />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />

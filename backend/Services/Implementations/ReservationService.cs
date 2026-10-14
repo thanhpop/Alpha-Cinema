@@ -4,6 +4,7 @@ using backend.Data;
 using backend.Helpers;
 using backend.DTO.Reservation;
 using backend.DTO.Seat;
+using backend.Exceptions;
 using backend.Model;
 using backend.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -96,7 +97,7 @@ namespace backend.Service.Implementations
                 .Select(ToDtoExpression)
                 .ToPagedResultAsync(query);
         }
-        public async Task<ReservationDto?> GetByIdAsync(string id)
+        public async Task<ReservationDto> GetByIdAsync(string id)
         {
             var reservation = await _db.Reservations
         .AsNoTracking()
@@ -125,27 +126,27 @@ namespace backend.Service.Implementations
         })
         .FirstOrDefaultAsync();
 
-            return reservation;
+            return reservation ?? throw ReservationNotFound();
         }
-        public async Task<ReservationDto?> CreateReservationAsync(long userId, ReservationRequestDto dto)
+        public async Task<ReservationDto> CreateReservationAsync(long userId, ReservationRequestDto dto)
         {
             var user = await _db.Users.FindAsync(userId);
             if (user == null)
-                throw new Exception("User not found");
+                throw new NotFoundException("Không tìm thấy người dùng.");
 
             var showtime = await _db.Showtimes.FindAsync(dto.ShowtimeId);
             if (showtime == null)
-                throw new Exception("Showtime not found");
+                throw new NotFoundException("Không tìm thấy suất chiếu.");
 
             if (dto.SeatIds == null || dto.SeatIds.Count == 0)
-                throw new ArgumentException("At least one seat must be selected", nameof(dto.SeatIds));
+                throw new BadRequestException("Vui lòng chọn ít nhất một ghế.");
 
             await using var tx = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
 
-        
+
             var distinctSeatIds = dto.SeatIds.Distinct().ToList();
             if (distinctSeatIds.Count != dto.SeatIds.Count)
-                throw new ArgumentException("Duplicate seat ids in request");
+                throw new BadRequestException("Danh sách ghế bị trùng.");
 
             var idsCsv = string.Join(", ", distinctSeatIds);
 
@@ -158,20 +159,20 @@ namespace backend.Service.Implementations
             {
                 var foundIds = seats.Select(s => s.Id).ToHashSet();
                 var notFound = distinctSeatIds.Where(id => !foundIds.Contains(id)).ToList();
-                throw new KeyNotFoundException($"Seats not found with IDs: {string.Join(", ", notFound)}");
+                throw new NotFoundException($"Không tìm thấy ghế: {string.Join(", ", notFound)}.");
             }
             var wrong = seats.Where(s => s.ShowtimeId != dto.ShowtimeId).ToList();
             if (wrong.Any())
             {
                 var wrongNums = string.Join(", ", wrong.Select(s => s.SeatNumber));
-                throw new ArgumentException($"Seats {wrongNums} do not belong to the requested showtime");
+                throw new BadRequestException($"Ghế {wrongNums} không thuộc suất chiếu này.");
             }
 
             var alreadyReserved = seats.Where(s => s.IsReserved).ToList();
             if (alreadyReserved.Any())
             {
                 var reservedNums = string.Join(", ", alreadyReserved.Select(s => s.SeatNumber));
-                throw new InvalidOperationException($"Seats already reserved: {reservedNums}");
+                throw new ConflictException($"Ghế {reservedNums} đã có người đặt.");
             }
 
        
@@ -227,24 +228,24 @@ namespace backend.Service.Implementations
             return reservationDto;
         }
 
-        public async Task<bool> ConfirmReservationAsync(string reservationId)
+        public async Task ConfirmReservationAsync(string reservationId)
         {
             var reservation = await _db.Reservations
     .Include(r => r.Seats)
     .FirstOrDefaultAsync(r => r.Id == reservationId);
 
             if (reservation == null)
-                return false;
+                throw ReservationNotFound();
 
             if (reservation.StatusId == 3)
-                throw new InvalidOperationException("Cannot confirm a canceled reservation");
+                throw new ConflictException("Không thể xác nhận đơn đặt vé đã bị hủy.");
 
             if (reservation.StatusId == 2 && reservation.Paid)
-                return true;
+                return;
             foreach (var seat in reservation.Seats)
             {
                 if (seat.IsReserved)
-                    throw new InvalidOperationException($"Seat {seat.SeatNumber} already reserved");
+                    throw new ConflictException($"Ghế {seat.SeatNumber} đã có người đặt.");
 
                 seat.IsReserved = true;
             }
@@ -257,20 +258,16 @@ namespace backend.Service.Implementations
             await _db.SaveChangesAsync();
 
             await _seatSessionService.RemoveAsync((int)reservation.ShowtimeId,  reservation.UserId);
-
-
-
-            return true;
         }
 
 
-        public async Task<bool> CancelReservationAsync(string reservationId)
+        public async Task CancelReservationAsync(string reservationId)
         {
-            var reservation = await _db.Reservations.Include(r => r.Showtime) 
-        .Include(r => r.Seats)    
+            var reservation = await _db.Reservations.Include(r => r.Showtime)
+        .Include(r => r.Seats)
         .FirstOrDefaultAsync(r => r.Id == reservationId);
             if (reservation == null)
-                return false;
+                throw ReservationNotFound();
             await using var tx = await _db.Database.BeginTransactionAsync();
             try
             {
@@ -304,9 +301,6 @@ namespace backend.Service.Implementations
            (int)reservation.ShowtimeId,
            reservation.UserId
        );
-
-
-                return true;
             }
             catch
             {
@@ -344,10 +338,9 @@ namespace backend.Service.Implementations
                 TotalSpent = await confirmed.SumAsync(r => (decimal?)r.TotalPrice) ?? 0
             };
         }
-        public async Task<bool> DeleteAsync(string id)
+        public async Task DeleteAsync(string id)
         {
-            var reservation = await _db.Reservations.FindAsync(id);
-            if (reservation == null) return false;
+            var reservation = await _db.Reservations.FindAsync(id) ?? throw ReservationNotFound();
 
                 var show = await _db.Showtimes.FindAsync(reservation.ShowtimeId);
                 if (show != null)
@@ -358,9 +351,9 @@ namespace backend.Service.Implementations
 
                 _db.Reservations.Remove(reservation);
                 await _db.SaveChangesAsync();
-                return true;
-
         }
+
+        private static NotFoundException ReservationNotFound() => new("Không tìm thấy đơn đặt vé.");
 
         private static string MapStatus(int statusId)
         {

@@ -2,6 +2,7 @@
 using backend.Helpers;
 using backend.Data;
 using backend.DTO.Theater;
+using backend.Exceptions;
 using backend.Model;
 using backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -31,12 +32,13 @@ namespace backend.Services.Implementations
             return paged.Map(MapToDto);
         }
 
-        public async Task<TheaterDto?> GetByIdAsync(long id)
+        public async Task<TheaterDto> GetByIdAsync(long id)
         {
             var entity = await _db.Theaters.AsNoTracking()
-                .FirstOrDefaultAsync(t => t.id == id);
+                .FirstOrDefaultAsync(t => t.id == id)
+                ?? throw TheaterNotFound();
 
-            return entity == null ? null : MapToDto(entity);
+            return MapToDto(entity);
         }
 
         public async Task<IEnumerable<TheaterDto>> GetByLocationAsync(string location)
@@ -65,10 +67,9 @@ namespace backend.Services.Implementations
             return MapToDto(entity);
         }
 
-        public async Task<TheaterDto?> UpdateAsync(long id, TheaterDto dto)
+        public async Task<TheaterDto> UpdateAsync(long id, TheaterDto dto)
         {
-            var existing = await _db.Theaters.FindAsync(id);
-            if (existing == null) return null;
+            var existing = await _db.Theaters.FindAsync(id) ?? throw TheaterNotFound();
 
             existing.name = dto.Name;
             existing.location = dto.Location;
@@ -78,15 +79,15 @@ namespace backend.Services.Implementations
             return MapToDto(existing);
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task DeleteAsync(long id)
         {
-            var existing = await _db.Theaters.FindAsync(id);
-            if (existing == null) return false;
+            var existing = await _db.Theaters.FindAsync(id) ?? throw TheaterNotFound();
 
             _db.Theaters.Remove(existing);
             await _db.SaveChangesAsync();
-            return true;
         }
+
+        private static NotFoundException TheaterNotFound() => new("Không tìm thấy rạp.");
 
         private static TheaterDto MapToDto(Theater t)
         {

@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/authService";
+import { getErrorMessage } from "@/utils/getErrorMessage";
 
 const { Option } = Select;
 
@@ -99,9 +100,8 @@ const Auth: React.FC = () => {
         message.success("Đăng nhập thành công!");
         navigate("/", { replace: true });
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Đăng nhập thất bại";
-      message.error(errorMessage);
+    } catch (err) {
+      message.error(getErrorMessage(err, "Đăng nhập thất bại"));
     }
   };
 
@@ -127,8 +127,8 @@ const Auth: React.FC = () => {
 
       message.success("Đăng ký thành công");
       setActiveTab("login");
-    } catch (err: any) {
-      message.error(err.message || "Đăng ký thất bại");
+    } catch (err) {
+      message.error(getErrorMessage(err, "Đăng ký thất bại"));
     }
   };
 

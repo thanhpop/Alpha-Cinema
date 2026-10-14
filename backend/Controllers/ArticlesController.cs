@@ -45,11 +45,6 @@ namespace backend.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var article = await _service.GetByIdAsync(id);
-            if (article == null)
-            {
-                return NotFound(ApiResponse<ArticlesDto>.Fail("Không tìm thấy bài viết", 404));
-            }
-
             return Ok(ApiResponse<ArticlesDto>.Success(article));
         }
         [Authorize]
@@ -64,23 +59,13 @@ namespace backend.Controllers
         public async Task<IActionResult> Update(int id, [FromBody] ArticlesDto dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
-            if (updated == null)
-            {
-                return NotFound(ApiResponse<ArticlesDto>.Fail("Không tìm thấy bài viết", 404));
-            }
-
             return Ok(ApiResponse<ArticlesDto>.Success(updated, "Cập nhật thành công"));
         }
         [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var ok = await _service.DeleteAsync(id);
-            if (!ok)
-            {
-                return NotFound(ApiResponse<object>.Fail("Không tìm thấy bài viết", 404));
-            }
-
+            await _service.DeleteAsync(id);
             return Ok(ApiResponse<object>.Success(null, "Xóa thành công"));
         }
     }

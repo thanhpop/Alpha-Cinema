@@ -1,68 +1,33 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.WebUtilities;
+using backend.Exceptions;
+using backend.Helpers;
+using Microsoft.AspNetCore.Diagnostics;
 
 namespace backend.Middleware
 {
     public class GlobalExceptionHandler : IExceptionHandler
     {
-        private readonly IProblemDetailsService _problemDetailsService;
         private readonly ILogger<GlobalExceptionHandler> _logger;
 
-        public GlobalExceptionHandler(IProblemDetailsService problemDetailsService, ILogger<GlobalExceptionHandler> logger)
+        public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
         {
             _logger = logger;
-            _problemDetailsService = problemDetailsService;
         }
+
         public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
         {
-
-            var status = StatusCodes.Status500InternalServerError;
-            var title = "An error occurred.";
-            object? detailObj = exception.Message;
-
-
-            switch (exception)
+            var (status, message) = exception switch
             {
-                case BadHttpRequestException badReq:
-                    _logger.LogWarning(exception, "Bad request: {Message}", badReq.Message);
-                    status = StatusCodes.Status400BadRequest;
-                    title = "Bad request";
-                    detailObj = badReq.Message;
-                    break;
-
-                case ArgumentException:
-                case InvalidOperationException:
-                    _logger.LogWarning(exception, "Invalid argument/state: {Message}", exception.Message);
-                    status = StatusCodes.Status400BadRequest;
-                    title = "Invalid argument";
-                    detailObj = exception.Message;
-                    break;
-
-                default:
-                    _logger.LogError(exception, "Unhandled exception occurred");
-                    status = StatusCodes.Status500InternalServerError;
-                    title = "Internal Server Error";
-                    detailObj = exception.Message;
-                    break;
-            }
-
-            var problem = new ProblemDetails
-            {
-                Title = title,
-                Detail = detailObj is string s ? s : null,
-                Status = status,
+                AppException app => (app.StatusCode, app.Message),
+                BadHttpRequestException badReq => (badReq.StatusCode, "Yêu cầu không hợp lệ."),
+                _ => (StatusCodes.Status500InternalServerError, "Đã có lỗi xảy ra, vui lòng thử lại sau.")
             };
-            problem.Type = null;
-            problem.Extensions["timestamp"] = DateTime.UtcNow.ToString();
-            problem.Extensions.Remove("traceId");
+            if (status >= StatusCodes.Status500InternalServerError)
+                _logger.LogError(exception, "Unhandled exception occurred");
+            else
+                _logger.LogWarning("{StatusCode} {Path}: {Message}", status, httpContext.Request.Path, exception.Message);
 
-            await _problemDetailsService.WriteAsync(new ProblemDetailsContext
-            {
-                HttpContext = httpContext,
-                ProblemDetails = problem,
-                Exception = exception
-            });
+            httpContext.Response.StatusCode = status;
+            await httpContext.Response.WriteAsJsonAsync(ApiResponse<object>.Fail(message, status), cancellationToken);
             return true;
         }
     }

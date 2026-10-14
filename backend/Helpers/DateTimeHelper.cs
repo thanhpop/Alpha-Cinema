@@ -1,3 +1,4 @@
+using backend.Exceptions;
 using System.Globalization;
 
 namespace backend.Helpers
@@ -96,7 +97,7 @@ namespace backend.Helpers
         {
             if (TryParse(input, out var value)) return value;
 
-            throw new ArgumentException(
+            throw new BadRequestException(
                 $"{fieldName} không hợp lệ. Định dạng hợp lệ: {DateFormat} hoặc {IsoDateFormat}.");
         }
 
@@ -119,7 +120,7 @@ namespace backend.Helpers
         {
             if (TryParseTime(input, out var value)) return value;
 
-            throw new ArgumentException($"{fieldName} phải có định dạng {TimeFormat}.");
+            throw new BadRequestException($"{fieldName} phải có định dạng {TimeFormat}.");
         }
 
         private static TimeZoneInfo ResolveVietnamTimeZone()

@@ -65,7 +65,7 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
     <Card
       hoverable
       className="w-full shadow-lg rounded-lg overflow-hidden transition-transform duration-300 hover:-translate-y-2 bg-white border border-gray-100"
-      bodyStyle={{ padding: "12px" }}
+      styles={{ body: { padding: "12px" } }}
       cover={
         <div className="relative group h-[350px] overflow-hidden">
           <img
@@ -132,8 +132,8 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
         footer={null}
         width={900}
         centered
-        destroyOnClose
-        bodyStyle={{ padding: 0, backgroundColor: "black" }}
+        destroyOnHidden
+        styles={{ body: { padding: 0, backgroundColor: "black" } }}
       >
         <div
           style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}

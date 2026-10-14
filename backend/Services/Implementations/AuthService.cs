@@ -1,5 +1,6 @@
 ﻿using backend.Data;
 using backend.DTO.Auth;
+using backend.Exceptions;
 using backend.Model;
 using backend.Service.Interfaces;
 using BCrypt.Net;
@@ -21,7 +22,6 @@ namespace backend.Service.Implementations
         private readonly IConfiguration _config;
         private readonly ILogger<AuthService> _logger;
         private readonly int _refreshTokenDays = 7;
-        // Token vừa bị rotate vẫn được chấp nhận trong khoảng này (nhiều tab refresh cùng lúc)
         private readonly TimeSpan _refreshReuseGrace = TimeSpan.FromSeconds(30);
         public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger)
         {
@@ -35,15 +35,19 @@ namespace backend.Service.Implementations
         {
             var username = dto.Username?.Trim();
             var email = dto.Email?.Trim().ToLowerInvariant();
-            var exists = await _db.Set<User>().AsNoTracking().AnyAsync(u => u.username == username || u.email == email);
-            if (exists)
-            {
-                throw new ArgumentException("User with the same username or email already exists.");
-            }
+            var existing = await _db.Set<User>().AsNoTracking()
+                .Where(u => u.username == username || u.email == email)
+                .Select(u => u.username)
+                .ToListAsync();
+            if (existing.Any(name => string.Equals(name, username, StringComparison.OrdinalIgnoreCase)))
+                throw new ConflictException("Tên đăng nhập đã tồn tại.");
+            if (existing.Count > 0)
+                throw new ConflictException("Email đã được sử dụng.");
+
             var hashed = BCrypt.Net.BCrypt.HashPassword(dto.Password);
             var defaultRole = await _db.Roles.FirstOrDefaultAsync(r => r.name == "USER");
             if (defaultRole == null)
-                throw new Exception("Default role 'User' not found");
+                throw new Exception("Không tìm thấy vai trò mặc định USER.");
 
             var user = new User
             {
@@ -56,26 +60,27 @@ namespace backend.Service.Implementations
             await _db.SaveChangesAsync();
             return user.id;
         }
-        public async Task<JwtResponseDto?> LoginAsync(LoginDto dto)
+        public async Task<JwtResponseDto> LoginAsync(LoginDto dto)
         {
+            var invalidCredentials = new UnauthorizedException("Tên đăng nhập hoặc mật khẩu không đúng.");
+
             if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
-                return null;
+                throw invalidCredentials;
 
             var user = await _db.Set<User>()
                 .Include(u => u.Role)
         .FirstOrDefaultAsync(u => u.username == dto.Username);
 
-            if (user == null) return null;
+            if (user == null) throw invalidCredentials;
 
             var ok = BCrypt.Net.BCrypt.Verify(dto.Password, user.password ?? string.Empty);
-            if (!ok) return null;
+            if (!ok) throw invalidCredentials;
 
 
             var (token, expire) = CreateJwtToken(user);
 
             var now = DateTime.UtcNow;
 
-            // Dọn các phiên đã hết hạn của user (mỗi lần rotate sinh thêm 1 dòng)
             await _db.RefreshTokens
                 .Where(r => r.UserId == user.id && r.ExpiryDate < now)
                 .ExecuteDeleteAsync();
@@ -85,7 +90,6 @@ namespace backend.Service.Implementations
             {
                 UserId = user.id,
                 Token = HashRefreshToken(refreshToken),
-                // Mỗi lần đăng nhập là một family mới
                 FamilyId = Guid.NewGuid().ToString("N"),
                 ExpiryDate = now.AddDays(_refreshTokenDays),
                 CreatedAt = now,
@@ -117,13 +121,9 @@ namespace backend.Service.Implementations
             return Base64UrlEncoder.Encode(bytes);
         }
 
-        // Token đã đủ ngẫu nhiên (64 byte) nên SHA-256 là đủ, không cần salt;
-        // hash cố định giúp tra cứu theo index. Hex thường để khớp SHA2() của MySQL trong migration.
         private static string HashRefreshToken(string token) =>
             Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
-        // Rotate: mỗi lần refresh cấp refresh token mới và đánh dấu token cũ đã bị thay thế.
-        // Token cũ bị gửi lại sau khoảng ân hạn => nghi bị đánh cắp, thu hồi cả family.
         public async Task<RefreshTokenResponseDto?> RefreshTokenAsync(string refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return null;
@@ -133,12 +133,10 @@ namespace backend.Service.Implementations
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Token == tokenHash);
 
-            // Không còn trong DB: đã logout, family đã bị thu hồi hoặc token không hợp lệ
             if (current == null) return null;
 
             var now = DateTime.UtcNow;
 
-            // Cả family dùng chung hạn tính từ lúc đăng nhập nên hết hạn cùng lúc
             if (current.ExpiryDate < now)
             {
                 await DeleteFamilyAsync(current.FamilyId);
@@ -159,7 +157,6 @@ namespace backend.Service.Implementations
 
             await using var tx = await _db.Database.BeginTransactionAsync();
 
-            // Chỉ cập nhật khi token vẫn còn hiệu lực để 2 request đồng thời không cùng rotate một token
             var rotated = await _db.RefreshTokens
                 .Where(r => r.Id == current.Id && r.RevokedAt == null)
                 .ExecuteUpdateAsync(s => s
@@ -169,7 +166,6 @@ namespace backend.Service.Implementations
 
             if (rotated == 0)
             {
-                // Request khác vừa rotate (hoặc logout) trước: đọc lại trạng thái mới nhất
                 await tx.RollbackAsync();
                 var latest = await _db.RefreshTokens
                     .AsNoTracking()
@@ -182,7 +178,6 @@ namespace backend.Service.Implementations
                 UserId = current.UserId,
                 Token = newTokenHash,
                 FamilyId = current.FamilyId,
-                // Giữ hạn tính từ lúc đăng nhập: rotate không kéo dài phiên
                 ExpiryDate = current.ExpiryDate,
                 CreatedAt = now,
                 UpdatedAt = now
@@ -204,8 +199,6 @@ namespace backend.Service.Implementations
                 && token.RevokedAt.HasValue
                 && now - token.RevokedAt.Value <= _refreshReuseGrace;
 
-            // Nhiều tab / request refresh cùng lúc: cookie đã được cập nhật token mới,
-            // chỉ cấp access token và không rotate thêm
             if (withinGrace)
                 return new RefreshTokenResponseDto { AccessToken = CreateJwtToken(user).token };
 
@@ -233,7 +226,6 @@ namespace backend.Service.Implementations
                            ?? _config["Jwt:Audience"];
             var expireString = Environment.GetEnvironmentVariable("JWT_EXPIRE_MINUTES");
 
-            // Chuyển sang số để dùng trong AddMinutes()
             int expireMinutes = int.Parse(expireString ?? "60");
 
             if (string.IsNullOrWhiteSpace(secret))
@@ -262,9 +254,9 @@ namespace backend.Service.Implementations
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.username ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
-            if (user.Role != null)
+            if (user.Role?.name is string roleName)
             {
-                claims.Add(new Claim(ClaimTypes.Role, user.Role.name));
+                claims.Add(new Claim(ClaimTypes.Role, roleName));
             }
             var expires = DateTime.UtcNow.AddMinutes(expireMinutes);
 
@@ -289,7 +281,6 @@ namespace backend.Service.Implementations
                 .FirstOrDefaultAsync(r => r.Token == tokenHash);
             if (refresh == null) return false;
 
-            // Logout: xóa cả family (token hiện tại và các token cũ đã rotate của phiên này)
             await DeleteFamilyAsync(refresh.FamilyId);
             return true;
         }

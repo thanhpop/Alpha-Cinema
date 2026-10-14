@@ -2,6 +2,7 @@
 using backend.Helpers;
 using backend.Data;
 using backend.DTO.Articles;
+using backend.Exceptions;
 using backend.Model;
 using backend.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -48,10 +49,9 @@ namespace backend.Service.Implementations
                 .ToListAsync();
         }
 
-        public async Task<ArticlesDto?> GetByIdAsync(int id)
+        public async Task<ArticlesDto> GetByIdAsync(int id)
         {
-            var news = await _context.Articles.FindAsync(id);
-            return news == null ? null : ToDto(news);
+            return ToDto(await FindAsync(id));
         }
 
         public async Task<ArticlesDto> CreateAsync(ArticlesDto dto)
@@ -72,10 +72,9 @@ namespace backend.Service.Implementations
             return ToDto(news);
         }
 
-        public async Task<ArticlesDto?> UpdateAsync(int id, ArticlesDto dto)
+        public async Task<ArticlesDto> UpdateAsync(int id, ArticlesDto dto)
         {
-            var news = await _context.Articles.FindAsync(id);
-            if (news == null) return null;
+            var news = await FindAsync(id);
 
             news.Title = dto.Title;
             news.Summary = dto.Summary;
@@ -88,15 +87,17 @@ namespace backend.Service.Implementations
             return ToDto(news);
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task DeleteAsync(int id)
         {
-            var news = await _context.Articles.FindAsync(id);
-            if (news == null) return false;
+            var news = await FindAsync(id);
 
             _context.Articles.Remove(news);
             await _context.SaveChangesAsync();
-            return true;
         }
+
+        private async Task<Article> FindAsync(int id) =>
+            await _context.Articles.FindAsync(id)
+            ?? throw new NotFoundException("Không tìm thấy bài viết.");
 
         private static ArticlesDto ToDto(Article n) => new()
         {

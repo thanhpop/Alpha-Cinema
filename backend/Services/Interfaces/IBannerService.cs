@@ -11,6 +11,6 @@ namespace backend.Service.Interfaces
         Task<PagedResult<BannerDto>> GetPagedAsync(PagedQuery query);
         Task<BannerDto> CreateAsync(BannerDto dto);
         Task<BannerDto> UpdateAsync(int id, BannerDto dto);
-        Task<bool> DeleteAsync(int id);
+        Task DeleteAsync(int id);
     }
 }

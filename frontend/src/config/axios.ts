@@ -73,8 +73,15 @@ instance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Access token hết hạn: refresh một lần rồi gửi lại request
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    // Access token hết hạn: refresh một lần rồi gửi lại request.
+    // 401 từ /auth (vd. sai mật khẩu) là lỗi thật, không refresh
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.startsWith('/auth/') &&
+      hasSession()
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -87,10 +94,7 @@ instance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${token}`;
         return instance(originalRequest);
       } catch (err) {
-        if (isRefreshRejected(err)) {
-          endSession();
-          window.location.href = '/login';
-        }
+        if (isRefreshRejected(err)) endSession();
         return Promise.reject(err);
       }
     }

@@ -23,6 +23,7 @@ namespace backend.Controller
         }
 
         [HttpGet]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetAll()
         {
             var users = await _service.GetAllAsync();
@@ -30,6 +31,7 @@ namespace backend.Controller
         }
 
         [HttpGet("paged")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
         {
             var data = await _service.GetPagedAsync(query);
@@ -40,45 +42,39 @@ namespace backend.Controller
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProfile()
         {
-            var userId = User.GetUserId();
-            if (userId == null)
-                return Unauthorized(ApiResponse<string>.Fail("Invalid token", 401));
-
-            var profile = await _service.GetProfileAsync(userId.Value);
-            if (profile == null) return NotFound(ApiResponse<string>.Fail("User not found", 404));
+            var profile = await _service.GetProfileAsync(User.GetRequiredUserId());
             return Ok(ApiResponse<UserProfileDto>.Success(profile));
         }
 
         [HttpPut("me")]
         public async Task<IActionResult> UpdateMyProfile(UpdateProfileDto dto)
         {
-            var userId = User.GetUserId();
-            if (userId == null)
-                return Unauthorized(ApiResponse<string>.Fail("Invalid token", 401));
-
-            var profile = await _service.UpdateProfileAsync(userId.Value, dto);
-            if (profile == null) return NotFound(ApiResponse<string>.Fail("User not found", 404));
+            var profile = await _service.UpdateProfileAsync(User.GetRequiredUserId(), dto);
             return Ok(ApiResponse<UserProfileDto>.Success(profile, "Cập nhật thông tin thành công"));
         }
 
         [HttpGet("{id:long}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetById(long id)
         {
             var user = await _service.GetByIdAsync(id);
-            if (user == null) return NotFound(new { code = 404, message = "User not found" });
             return Ok(ApiResponse<UserDto>.Success(user));
         }
 
+        [HttpPut("{id:long}")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> Update(long id, AdminUpdateUserDto dto)
+        {
+            var user = await _service.UpdateAsync(id, dto);
+            return Ok(ApiResponse<UserDto>.Success(user, "Cập nhật người dùng thành công"));
+        }
 
         [HttpDelete("{id:long}")]
         [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Delete(long id)
         {
-
-                var ok = await _service.DeleteAsync(id);
-                if (!ok) return NotFound(new { code = 404, message = "User not found" });
-                return NoContent(); 
-     
+            await _service.DeleteAsync(id, User.GetRequiredUserId());
+            return NoContent();
         }
     }
 }

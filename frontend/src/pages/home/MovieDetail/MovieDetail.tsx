@@ -388,7 +388,7 @@ const MovieDetailPage: React.FC = () => {
         footer={null}
         width={900}
         centered
-        destroyOnClose={true}
+        destroyOnHidden
         closeIcon={
           <CloseOutlined
             style={{
@@ -407,8 +407,8 @@ const MovieDetailPage: React.FC = () => {
         }
         styles={{
           mask: { backgroundColor: "rgba(0, 0, 0, 0.7)" },
+          body: { padding: 0, backgroundColor: "black" },
         }}
-        bodyStyle={{ padding: 0, backgroundColor: "black" }}
       >
         <div
           style={{

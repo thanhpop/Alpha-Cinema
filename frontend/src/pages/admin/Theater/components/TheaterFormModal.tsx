@@ -24,7 +24,7 @@ const TheaterFormModal: React.FC<TheaterFormModalProps> = ({
     width={700}
     okText={isEditing ? "Lưu" : "Tạo"}
     onOk={onOk}
-    destroyOnClose
+    destroyOnHidden
   >
     <Form form={form} layout="vertical" initialValues={{ capacity: 0 }}>
       <Form.Item

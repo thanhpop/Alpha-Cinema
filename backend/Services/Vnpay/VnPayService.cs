@@ -18,7 +18,8 @@ namespace backend.Service.Vnpay
             var pay = new VnPayLibrary();
             var urlCallBack = Environment.GetEnvironmentVariable("VNPAY_RETURN_URL");
             var tmnCode = Environment.GetEnvironmentVariable("VNPAY_TMN_CODE");
-            var hashSecret = Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
+            var baseUrl = _configuration["Vnpay:BaseUrl"]
+                ?? throw new InvalidOperationException("Vnpay:BaseUrl missing in appsettings.json");
 
 
 
@@ -41,20 +42,21 @@ namespace backend.Service.Vnpay
 
             pay.AddRequestData("vnp_TxnRef", model.ReservationId);
 
-            var paymentUrl = pay.CreateRequestUrl(
-                _configuration["Vnpay:BaseUrl"],
-                hashSecret
-            );
+            var paymentUrl = pay.CreateRequestUrl(baseUrl, GetHashSecret());
 
             return paymentUrl;
         }
         public PaymentResponseModel PaymentExecute(IQueryCollection collections)
         {
             var pay = new VnPayLibrary();
-            var response = pay.GetFullResponseData(collections, _configuration["Vnpay:HashSecret"]);
+            var response = pay.GetFullResponseData(collections, GetHashSecret());
 
             return response;
         }
+
+        private static string GetHashSecret() =>
+            Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET")
+                ?? throw new InvalidOperationException("VNPAY_HASH_SECRET missing in .env file");
 
 
 

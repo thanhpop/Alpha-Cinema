@@ -32,6 +32,7 @@ import { seatSessionService } from "@/services/seatSessionService";
 import { seatService } from "@/services/seatService";
 import type { Seat } from "@/types/Seat";
 import { createSeatStream } from "@/services/seatStreamService";
+import { getErrorMessage } from "@/utils/getErrorMessage";
 
 const { Content } = Layout;
 const { Text, Title } = Typography;
@@ -294,7 +295,7 @@ const BookingPage: React.FC = () => {
         setSelectedSeats((prev) => [...prev, seat]);
       }
     } catch (err) {
-      message.error("Không thể giữ ghế");
+      message.error(getErrorMessage(err, "Không thể giữ ghế"));
     }
   };
 
@@ -548,7 +549,7 @@ const BookingPage: React.FC = () => {
             <div className="sticky top-24 z-10">
               <Card
                 className="shadow-xl border-0 rounded-xl overflow-hidden"
-                bodyStyle={{ padding: 0 }}
+                styles={{ body: { padding: 0 } }}
               >
                 <div className="p-6 border-b border-gray-100 flex gap-4 bg-white">
                   <img

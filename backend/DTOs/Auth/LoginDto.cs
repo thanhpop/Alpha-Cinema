@@ -4,10 +4,10 @@ namespace backend.DTO.Auth
 {
     public class LoginDto
     {
-        [Required]
+        [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập.")]
         public string? Username { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
         public string? Password { get; set; }
     }
 }

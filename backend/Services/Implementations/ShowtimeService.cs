@@ -5,6 +5,7 @@ using backend.Helpers;
 using backend.DTO;
 using backend.DTO.Seat;
 using backend.DTO.Showtime;
+using backend.Exceptions;
 using backend.Model;
 using backend.Service.Interfaces;
 using backend.Services.Interfaces;
@@ -95,13 +96,12 @@ namespace backend.Services.Implementations
 
 
 
-        public async Task<ShowtimeDto?> GetByIdAsync(long id)
+        public async Task<ShowtimeDto> GetByIdAsync(long id)
         {
             var s = await _db.Showtimes.AsNoTracking()
                         .Include(x => x.Seats)
-                        .FirstOrDefaultAsync(x => x.Id == id);
-
-            if (s == null) return null;
+                        .FirstOrDefaultAsync(x => x.Id == id)
+                        ?? throw ShowtimeNotFound();
 
             return new ShowtimeDto
             {
@@ -328,17 +328,17 @@ namespace backend.Services.Implementations
         public async Task<ShowtimeDto> CreateAsync(ShowtimeDto dto)
         {
             var movieExists = await _db.Movies.AnyAsync(m => m.id == dto.MovieId);
-            if (!movieExists) throw new KeyNotFoundException($"Movie {dto.MovieId} not found.");
+            if (!movieExists) throw new NotFoundException("Không tìm thấy phim.");
 
             var theater = await _db.Theaters.FirstOrDefaultAsync(t => t.id == dto.TheaterId);
-            if (theater == null) throw new KeyNotFoundException($"Theater {dto.TheaterId} not found.");
+            if (theater == null) throw TheaterNotFound();
             if (dto.TotalSeats > theater.capacity)
             {
-                throw new ArgumentException($"TotalSeats ({dto.TotalSeats}) cannot be greater than theater capacity ({theater.capacity}).");
+                throw new BadRequestException($"Số ghế ({dto.TotalSeats}) không được vượt quá sức chứa của rạp ({theater.capacity}).");
             }
 
 
-            var time = DateTimeHelper.ParseTimeOrThrow(dto.ShowTime, "ShowTime");
+            var time = DateTimeHelper.ParseTimeOrThrow(dto.ShowTime, "Giờ chiếu");
 
             var entity = new Showtime
             {
@@ -389,24 +389,20 @@ namespace backend.Services.Implementations
             return result;
         }
 
-        public async Task<ShowtimeDto?> UpdateAsync(long id, ShowtimeDto dto)
+        public async Task<ShowtimeDto> UpdateAsync(long id, ShowtimeDto dto)
         {
             var existing = await _db.Showtimes
-                                    .Include(s => s.Seats) 
-                                    .FirstOrDefaultAsync(s => s.Id == id);
+                                    .Include(s => s.Seats)
+                                    .FirstOrDefaultAsync(s => s.Id == id)
+                                    ?? throw ShowtimeNotFound();
 
-            var theater = await _db.Theaters.FirstOrDefaultAsync(t => t.id == dto.TheaterId);
-            if (theater == null)
+            var theaterExists = await _db.Theaters.AnyAsync(t => t.id == dto.TheaterId);
+            if (!theaterExists)
             {
-                throw new KeyNotFoundException($"Theater {dto.TheaterId} not found.");
+                throw TheaterNotFound();
             }
 
-            var parsedTime = DateTimeHelper.ParseTimeOrThrow(dto.ShowTime, "ShowTime");
-
-            if (existing == null)
-            {
-                return null;
-            }
+            var parsedTime = DateTimeHelper.ParseTimeOrThrow(dto.ShowTime, "Giờ chiếu");
 
             existing.MovieId = dto.MovieId;
             existing.TheaterId = dto.TheaterId;
@@ -439,21 +435,18 @@ namespace backend.Services.Implementations
         }
 
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task DeleteAsync(long id)
         {
-                
-                var entity = await _db.Showtimes.FindAsync(id);
-                if (entity != null)
-                {
-                    await _seatService.DeleteByShowtimeAsync(id);
-                    _db.Showtimes.Remove(entity);
-                    await _db.SaveChangesAsync();
-                    return true;
-                
-                }
-            return false;
+            var entity = await _db.Showtimes.FindAsync(id) ?? throw ShowtimeNotFound();
 
+            await _seatService.DeleteByShowtimeAsync(id);
+            _db.Showtimes.Remove(entity);
+            await _db.SaveChangesAsync();
         }
+
+        private static NotFoundException ShowtimeNotFound() => new("Không tìm thấy suất chiếu.");
+
+        private static NotFoundException TheaterNotFound() => new("Không tìm thấy rạp.");
 
 
     }

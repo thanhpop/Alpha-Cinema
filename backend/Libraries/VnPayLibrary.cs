@@ -25,7 +25,7 @@ namespace backend.Libraries
             var vnPayTranId = Convert.ToInt64(vnPay.GetResponseData("vnp_TransactionNo"));
             var vnpResponseCode = vnPay.GetResponseData("vnp_ResponseCode");
             var vnpSecureHash =
-                collection.FirstOrDefault(k => k.Key == "vnp_SecureHash").Value; 
+                collection.FirstOrDefault(k => k.Key == "vnp_SecureHash").Value.ToString();
             var orderInfo = vnPay.GetResponseData("vnp_OrderInfo");
             var checkSignature =
                 vnPay.ValidateSignature(vnpSecureHash, hashSecret); 
@@ -74,7 +74,7 @@ namespace backend.Libraries
                 return "127.0.0.1";
             }
         }
-        public void AddRequestData(string key, string value)
+        public void AddRequestData(string key, string? value)
         {
             if (!string.IsNullOrEmpty(value))
             {
@@ -82,7 +82,7 @@ namespace backend.Libraries
             }
         }
 
-        public void AddResponseData(string key, string value)
+        public void AddResponseData(string key, string? value)
         {
             if (!string.IsNullOrEmpty(value))
             {
@@ -173,7 +173,7 @@ namespace backend.Libraries
 }
 public class VnPayCompare : IComparer<string>
 {
-    public int Compare(string x, string y)
+    public int Compare(string? x, string? y)
     {
         if (x == y) return 0;
         if (x == null) return -1;

@@ -6,13 +6,13 @@ namespace backend.DTO.Theater
     {
         public long Id { get; set; }
 
-        [Required(ErrorMessage = "The theater name is required.")]
+        [Required(ErrorMessage = "Vui lòng nhập tên rạp.")]
         public string? Name { get; set; }
 
         public string? Location { get; set; }
 
-        [Required(ErrorMessage = "Capacity is required")]
-        [Range(0, 1000, ErrorMessage = "Capacity must be a number between 0 and 1000.")]
+        [Required(ErrorMessage = "Vui lòng nhập sức chứa.")]
+        [Range(0, 1000, ErrorMessage = "Sức chứa phải từ 0 đến 1000 ghế.")]
         public int Capacity { get; set; }
     }
 }

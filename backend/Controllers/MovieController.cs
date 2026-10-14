@@ -37,8 +37,6 @@ namespace backend.Controllers
         public async Task<IActionResult> Get(long id)
         {
             var movie = await _service.GetByIdAsync(id);
-            if (movie == null) return NotFound();
-
             return Ok(ApiResponse<MovieDto>.Success(movie));
         }
 
@@ -53,17 +51,13 @@ namespace backend.Controllers
         public async Task<IActionResult> Update(long id, [FromBody] MovieDto dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
-            if (updated == null) return NotFound();
-
             return Ok(ApiResponse<MovieDto>.Success(updated));
         }
 
         [HttpDelete("{id:long}")]
         public async Task<IActionResult> Delete(long id)
         {
-            var ok = await _service.DeleteAsync(id);
-            if (!ok) return NotFound();
-
+            await _service.DeleteAsync(id);
             return NoContent();
         }
     }

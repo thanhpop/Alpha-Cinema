@@ -1,3 +1,4 @@
+using backend.Exceptions;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -5,7 +6,6 @@ namespace backend.Helpers
 {
     public static class ClaimsPrincipalExtensions
     {
-        // Token lưu user id ở claim "sub"; JwtBearer có thể map nó sang NameIdentifier
         public static long? GetUserId(this ClaimsPrincipal user)
         {
             var value = user.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -13,5 +13,8 @@ namespace backend.Helpers
 
             return long.TryParse(value, out var id) ? id : null;
         }
+
+        public static long GetRequiredUserId(this ClaimsPrincipal user) =>
+            user.GetUserId() ?? throw new UnauthorizedException("Phiên đăng nhập không hợp lệ, vui lòng đăng nhập lại.");
     }
 }

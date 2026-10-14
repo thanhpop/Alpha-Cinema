@@ -22,6 +22,7 @@ import { theaterService } from "@/services/theaterService";
 import { showtimeService, type Showtime } from "@/services/showtimeService";
 import { usePagedList } from "@/hooks/usePagedList";
 import ShowtimeFormModal from "@/pages/admin/Showtime/components/ShowtimeFormModal";
+import { getErrorMessage } from "@/utils/getErrorMessage";
 
 const { Title } = Typography;
 
@@ -124,9 +125,9 @@ const AdminShowtimeHookPage: React.FC = () => {
 
       closeEditModal();
       reload();
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      message.error(err?.message || "Lỗi khi lưu");
+      message.error(getErrorMessage(err, "Lỗi khi lưu"));
     } finally {
       setSaving(false);
     }

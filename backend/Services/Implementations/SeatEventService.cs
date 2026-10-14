@@ -24,9 +24,10 @@ public class SeatEventService
 
     private void SubscribeRedis()
     {
-        _subscriber.Subscribe("seat-updated", async (channel, message) =>
+        _subscriber.Subscribe(RedisChannel.Literal("seat-updated"), async (channel, message) =>
         {
-            int showtimeId = int.Parse(message!);
+            if (!message.TryParse(out int showtimeId))
+                return;
 
             using var scope = _scopeFactory.CreateScope();
             var seatSessionService = scope.ServiceProvider
@@ -49,7 +50,7 @@ public class SeatEventService
                 soldSeatIds = soldSeats
             });
         });
-        _subscriber.Subscribe("__keyevent@0__:expired", async (channel, key) =>
+        _subscriber.Subscribe(RedisChannel.Literal("__keyevent@0__:expired"), async (channel, key) =>
         {
             var keyStr = key.ToString();
 
@@ -64,7 +65,7 @@ public class SeatEventService
                 return;
 
             int showtimeId = int.Parse(parts[1]);
-            await _subscriber.PublishAsync("seat-updated", showtimeId);
+            await _subscriber.PublishAsync(RedisChannel.Literal("seat-updated"), showtimeId);
         });
     }
 

@@ -6,7 +6,7 @@ namespace backend.DTO.Seat
     {
         public long Id { get; set; }
 
-        [Required(ErrorMessage = "ShowtimeId is required.")]
+        [Required(ErrorMessage = "Vui lòng chọn suất chiếu.")]
         public long ShowtimeId { get; set; }
 
 

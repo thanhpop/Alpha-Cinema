@@ -10,6 +10,7 @@ using backend.Service.Vnpay;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -43,7 +44,26 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Lỗi validation trả cùng định dạng ApiResponse: message là lỗi đầu tiên, data là lỗi theo từng field
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var errors = context.ModelState
+                .Where(e => e.Value?.Errors.Count > 0)
+                .ToDictionary(e => e.Key, e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray());
+
+            // Key rỗng hoặc bắt đầu bằng "$" là lỗi parse JSON, message của .NET không dùng được cho người dùng
+            var malformed = errors.Keys.Any(k => k.Length == 0 || k.StartsWith('$'));
+            var message = malformed
+                ? "Dữ liệu gửi lên không đúng định dạng."
+                : errors.Values.SelectMany(x => x).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m))
+                  ?? "Dữ liệu không hợp lệ.";
+
+            return new BadRequestObjectResult(new ApiResponse<object>(StatusCodes.Status400BadRequest, message, errors));
+        };
+    });
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
@@ -137,22 +157,6 @@ using (var scope = app.Services.CreateScope())
 
 
 
-
-var redis = app.Services.GetRequiredService<IConnectionMultiplexer>();
-var subscriber = redis.GetSubscriber();
-
-subscriber.Subscribe("seat-updated", async (channel, message) =>
-{
-    int showtimeId = int.Parse(message);
-
-    using var scope = app.Services.CreateScope();
-    var seatService = scope.ServiceProvider.GetRequiredService<SeatSessionService>();
-    var eventService = scope.ServiceProvider.GetRequiredService<SeatEventService>();
-
-    var holdSeats = await seatService.GetAllHoldSeatsByShowtime(showtimeId);
-
-    await eventService.BroadcastAsync(showtimeId, holdSeats);
-});
 
 app.UseExceptionHandler();
 

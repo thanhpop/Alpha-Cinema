@@ -1,11 +1,10 @@
-﻿using backend.Data;
 using backend.DTO.Payment;
 using backend.Helpers;
 using backend.Model.Vnpay;
+using backend.Service.Interfaces;
 using backend.Service.Vnpay;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 
 
@@ -19,28 +18,21 @@ namespace backend.Controller
 
         private readonly IVnPayService _vnPayService;
         private readonly SeatSessionService _seatSessionService;
-        private readonly AppDbContext _context;
-        public PaymentController(IVnPayService vnPayService, SeatSessionService seatSessionService, AppDbContext context)
+        private readonly IReservationService _reservationService;
+        public PaymentController(IVnPayService vnPayService, SeatSessionService seatSessionService, IReservationService reservationService)
         {
 
             _vnPayService = vnPayService;
             _seatSessionService = seatSessionService;
-            _context = context;
+            _reservationService = reservationService;
         }
         [HttpPost("vnpay")]
         public async Task<IActionResult> CreatePaymentUrlVnpay(PaymentInformationDto model)
         {
-            var reservation = await _context.Reservations
-                .FirstOrDefaultAsync(r => r.Id == model.ReservationId);
+            var reservation = await _reservationService.GetByIdAsync(model.ReservationId);
 
-            if (reservation == null)
-                return BadRequest("Reservation not found");
+            await _seatSessionService.ExtendTtlAsync(reservation.ShowtimeId, reservation.UserId, 15);
 
-            var extended = await _seatSessionService
-                .ExtendTtlAsync(reservation.ShowtimeId, reservation.UserId, 15);
-
-            if (!extended)
-                return BadRequest("Seat session expired.");
             var paymentModel = new PaymentInformationModel
             {
                 ReservationId = model.ReservationId,

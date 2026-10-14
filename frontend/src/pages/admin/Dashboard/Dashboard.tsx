@@ -398,7 +398,7 @@ const AdminDashboard: React.FC = () => {
                     </span>
                   }
                   className="shadow-sm border-none rounded-xl h-full"
-                  bodyStyle={{ padding: 0 }}
+                  styles={{ body: { padding: 0 } }}
                 >
                   <Table
                     columns={theaterColumns}
@@ -418,7 +418,7 @@ const AdminDashboard: React.FC = () => {
                     </span>
                   }
                   className="shadow-sm border-none rounded-xl h-full"
-                  bodyStyle={{ padding: 0 }}
+                  styles={{ body: { padding: 0 } }}
                 >
                   <Table
                     columns={movieInsightColumns}

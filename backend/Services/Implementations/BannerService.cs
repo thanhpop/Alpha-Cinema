@@ -2,6 +2,7 @@
 using backend.Helpers;
 using backend.Data;
 using backend.DTO.Banner;
+using backend.Exceptions;
 using backend.Model;
 using backend.Service.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -85,10 +86,9 @@ namespace backend.Service.Implementations
             return dto;
         }
 
-        public async Task<BannerDto?> UpdateAsync(int id, BannerDto dto)
+        public async Task<BannerDto> UpdateAsync(int id, BannerDto dto)
         {
-            var banner = await _context.Banners.FindAsync(id);
-            if (banner == null) return null;
+            var banner = await FindAsync(id);
 
             banner.ImageUrl = dto.ImageUrl;
             banner.Title = dto.Title;
@@ -106,15 +106,17 @@ namespace backend.Service.Implementations
             };
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task DeleteAsync(int id)
         {
-            var banner = await _context.Banners.FindAsync(id);
-            if (banner == null) return false;
+            var banner = await FindAsync(id);
 
             _context.Banners.Remove(banner);
             await _context.SaveChangesAsync();
-            return true;
         }
+
+        private async Task<Banner> FindAsync(int id) =>
+            await _context.Banners.FindAsync(id)
+            ?? throw new NotFoundException("Không tìm thấy banner.");
     }
 
 }

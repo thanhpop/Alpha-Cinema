@@ -53,9 +53,6 @@ namespace backend.Controller
         public async Task<IActionResult> Update(int id, [FromBody] BannerDto dto)
         {
             var updatedBanner = await _service.UpdateAsync(id, dto);
-            if (updatedBanner == null)
-                return NotFound(ApiResponse<string>.Fail("Banner not found", 404));
-
             return Ok(ApiResponse<BannerDto>.Success(
                 updatedBanner,
                 "Updated banner successfully"
@@ -65,10 +62,7 @@ namespace backend.Controller
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var success = await _service.DeleteAsync(id);
-            if (!success)
-                return NotFound(ApiResponse<string>.Fail("Banner not found", 404));
-
+            await _service.DeleteAsync(id);
             return Ok(ApiResponse<string>.Success(null, "Deleted banner successfully"));
         }
     }

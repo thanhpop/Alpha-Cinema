@@ -7,9 +7,10 @@ namespace backend.Service.Interfaces
     {
         Task<IEnumerable<UserDto>> GetAllAsync();
         Task<PagedResult<UserDto>> GetPagedAsync(PagedQuery query);
-        Task<UserDto?> GetByIdAsync(long id);
-        Task<UserProfileDto?> GetProfileAsync(long id);
-        Task<UserProfileDto?> UpdateProfileAsync(long id, UpdateProfileDto dto);
-        Task<bool> DeleteAsync(long id);
+        Task<UserDto> GetByIdAsync(long id);
+        Task<UserProfileDto> GetProfileAsync(long id);
+        Task<UserProfileDto> UpdateProfileAsync(long id, UpdateProfileDto dto);
+        Task<UserDto> UpdateAsync(long id, AdminUpdateUserDto dto);
+        Task DeleteAsync(long id, long currentUserId);
     }
 }

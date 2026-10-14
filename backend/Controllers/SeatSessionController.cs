@@ -15,17 +15,12 @@ public class SeatSessionController : ControllerBase
         _service = service;
     }
 
-    private bool TryGetUserId(out int userId)
-    {
-        var id = User.GetUserId();
-        userId = id.HasValue ? (int)id.Value : 0;
-        return id.HasValue;
-    }
+    private int CurrentUserId => (int)User.GetRequiredUserId();
 
     [HttpPost("start")]
     public async Task<IActionResult> Start([FromQuery] int showtimeId)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token");
+        var userId = CurrentUserId;
 
         var session = new SeatSession
         {
@@ -34,10 +29,7 @@ public class SeatSessionController : ControllerBase
             CreatedAt = DateTime.UtcNow
         };
 
-        var created = await _service.CreateAsync(session);
-
-        if (!created)
-            return BadRequest("Showtime does not exist");
+        await _service.CreateAsync(session);
 
         var savedSession = await _service.GetAsync(showtimeId, userId);
 
@@ -56,7 +48,7 @@ public class SeatSessionController : ControllerBase
         int showtimeId,
         [FromBody] List<long> seatIds)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token");
+        var userId = CurrentUserId;
 
         await _service.AddSeatsAsync(showtimeId, userId, seatIds);
         return Ok("Seats added");
@@ -67,7 +59,7 @@ public class SeatSessionController : ControllerBase
         int showtimeId,
         [FromBody] List<long> seatIds)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token");
+        var userId = CurrentUserId;
 
         await _service.RemoveSeatsAsync(showtimeId, userId, seatIds);
         return Ok("SeatIds removed");
@@ -76,11 +68,9 @@ public class SeatSessionController : ControllerBase
     [HttpGet("{showtimeId}")]
     public async Task<IActionResult> Get(int showtimeId)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token");
+        var userId = CurrentUserId;
 
-        var session = await _service.GetAsync(showtimeId, userId);
-        if (session == null)
-            return NotFound("Session expired or not found");
+        var session = await _service.GetRequiredAsync(showtimeId, userId);
 
         var ttl = await _service.GetTtlAsync(showtimeId, userId);
 
@@ -94,7 +84,7 @@ public class SeatSessionController : ControllerBase
     [HttpGet("{showtimeId}/snapshot")]
     public async Task<IActionResult> Snapshot(int showtimeId)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token");
+        var userId = CurrentUserId;
 
         var session = await _service.GetAsync(showtimeId, userId);
         var ttl = await _service.GetTtlAsync(showtimeId, userId);
@@ -113,7 +103,7 @@ public class SeatSessionController : ControllerBase
     [HttpGet("{showtimeId:long}/ttl")]
     public async Task<IActionResult> GetSessionTtl(long showtimeId)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token");
+        var userId = CurrentUserId;
 
         var ttl = await _service.GetTtlAsync(showtimeId, userId);
         return Ok(ttl);
@@ -122,7 +112,7 @@ public class SeatSessionController : ControllerBase
     [HttpDelete("{showtimeId}")]
     public async Task<IActionResult> Finish(int showtimeId)
     {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token");
+        var userId = CurrentUserId;
 
         await _service.RemoveAsync(showtimeId, userId);
         return Ok("Seat session removed");

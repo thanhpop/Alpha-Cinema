@@ -57,17 +57,19 @@ const AppHeader: React.FC = () => {
         />
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 min-w-0">
         {user ? (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3 min-w-0">
             <div
-              className="cursor-pointer flex items-center hover:opacity-70 transition-opacity"
+              className="cursor-pointer flex items-center min-w-0 hover:opacity-70 transition-opacity"
               onClick={() => navigate("/profile")}
               title="Xem thông tin tài khoản"
             >
-              <span className="font-medium text-gray-700 select-none">
-                Xin chào,{" "}
-                <span className="text-blue-600 font-bold">{user.username}</span>
+              <span className="flex items-center min-w-0 font-medium text-gray-700 select-none whitespace-nowrap leading-normal">
+                <span className="hidden sm:inline">Xin chào,&nbsp;</span>
+                <span className="text-blue-600 font-bold truncate max-w-[110px] sm:max-w-[200px]">
+                  {user.username}
+                </span>
               </span>
             </div>
 
@@ -76,9 +78,10 @@ const AppHeader: React.FC = () => {
               danger
               icon={<LogoutOutlined />}
               onClick={handleLogout}
+              title="Đăng xuất"
               className="font-medium hover:bg-red-50"
             >
-              Đăng xuất
+              <span className="hidden sm:inline">Đăng xuất</span>
             </Button>
           </div>
         ) : (

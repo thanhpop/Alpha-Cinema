@@ -2,15 +2,17 @@
 import instance from '@/config/axios';
 import { toPagedParams, type PagedQuery, type PagedResult } from '@/types/Pagination';
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-}
-
 export type Gender = "male" | "female" | "other";
 
-export interface UserProfile {
+export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: "male", label: "Nam" },
+  { value: "female", label: "Nữ" },
+  { value: "other", label: "Khác" },
+];
+
+export const PHONE_PATTERN = /^(0|\+84)\d{9}$/;
+
+export interface User {
   id: number;
   username: string;
   email: string;
@@ -20,10 +22,16 @@ export interface UserProfile {
   dateOfBirthIso: string | null;
 }
 
+export type UserProfile = User;
+
 export interface UpdateProfilePayload {
   phone: string | null;
   gender: Gender | null;
   dateOfBirth: string | null;
+}
+
+export interface UpdateUserPayload extends UpdateProfilePayload {
+  email: string;
 }
 
 export interface ApiResponse<T> {
@@ -50,5 +58,12 @@ export const userService = {
   updateMe: async (payload: UpdateProfilePayload): Promise<UserProfile> => {
     const res = await instance.put<ApiResponse<UserProfile>>("/users/me", payload);
     return res.data.data;
+  },
+  update: async (id: number, payload: UpdateUserPayload): Promise<User> => {
+    const res = await instance.put<ApiResponse<User>>(`/users/${id}`, payload);
+    return res.data.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await instance.delete(`/users/${id}`);
   },
 };
