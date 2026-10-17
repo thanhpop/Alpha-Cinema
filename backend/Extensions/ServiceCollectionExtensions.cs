@@ -11,6 +11,7 @@ namespace backend.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
+            services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<ITheaterService, TheaterService>();
             services.AddScoped<IMovieService, MovieService>();
             services.AddScoped<ISeatService, SeatService>();

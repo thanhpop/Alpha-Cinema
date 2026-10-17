@@ -2,6 +2,7 @@ import instance from "@/config/axios";
 import type {
   LoginPayload,
   RegisterPayload,
+  ResetPasswordPayload,
   AuthResponse,
 } from "@/types/Auth";
 
@@ -34,8 +35,17 @@ export const authService = {
     };
   },
 
-  // Refresh token nằm trong cookie HttpOnly nên không cần gửi kèm; refresh do axios interceptor tự xử lý
   async logout(): Promise<void> {
     await instance.post("/auth/logout");
+  },
+
+  async forgotPassword(email: string): Promise<string> {
+    const res = await instance.post("/auth/forgot-password", { email });
+    return String(res.data?.message ?? "");
+  },
+
+  async resetPassword(payload: ResetPasswordPayload): Promise<string> {
+    const res = await instance.post("/auth/reset-password", payload);
+    return String(res.data?.message ?? "");
   },
 };

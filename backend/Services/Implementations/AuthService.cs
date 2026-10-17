@@ -9,6 +9,8 @@ using Microsoft.IdentityModel.Tokens;
 using Org.BouncyCastle.Crypto.Generators;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using StackExchange.Redis;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using static Org.BouncyCastle.Crypto.Engines.SM2Engine;
@@ -21,13 +23,20 @@ namespace backend.Service.Implementations
         private readonly AppDbContext _db;
         private readonly IConfiguration _config;
         private readonly ILogger<AuthService> _logger;
+        private readonly IDatabase _redis;
+        private readonly IEmailService _email;
         private readonly int _refreshTokenDays = 7;
         private readonly TimeSpan _refreshReuseGrace = TimeSpan.FromSeconds(30);
-        public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger)
+        private readonly TimeSpan _resetTokenLifetime = TimeSpan.FromMinutes(15);
+        private readonly TimeSpan _resetRequestCooldown = TimeSpan.FromSeconds(60);
+        public AuthService(AppDbContext db, IConfiguration config, ILogger<AuthService> logger,
+            IConnectionMultiplexer redis, IEmailService email)
         {
             _db = db ?? throw new ArgumentNullException(nameof(db));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger;
+            _redis = redis.GetDatabase();
+            _email = email;
         }
 
 
@@ -85,11 +94,11 @@ namespace backend.Service.Implementations
                 .Where(r => r.UserId == user.id && r.ExpiryDate < now)
                 .ExecuteDeleteAsync();
 
-            var refreshToken = GenerateRefreshToken();
+            var refreshToken = GenerateSecureToken();
             var refreshEntity = new RefreshToken
             {
                 UserId = user.id,
-                Token = HashRefreshToken(refreshToken),
+                Token = HashToken(refreshToken),
                 FamilyId = Guid.NewGuid().ToString("N"),
                 ExpiryDate = now.AddDays(_refreshTokenDays),
                 CreatedAt = now,
@@ -113,7 +122,7 @@ namespace backend.Service.Implementations
             return dtoResp;
 
         }
-        private string GenerateRefreshToken(int size = 64)
+        private string GenerateSecureToken(int size = 64)
         {
             var bytes = new byte[size];
             using var rng = RandomNumberGenerator.Create();
@@ -121,14 +130,14 @@ namespace backend.Service.Implementations
             return Base64UrlEncoder.Encode(bytes);
         }
 
-        private static string HashRefreshToken(string token) =>
+        private static string HashToken(string token) =>
             Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 
         public async Task<RefreshTokenResponseDto?> RefreshTokenAsync(string refreshToken)
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return null;
 
-            var tokenHash = HashRefreshToken(refreshToken);
+            var tokenHash = HashToken(refreshToken);
             var current = await _db.RefreshTokens
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Token == tokenHash);
@@ -152,8 +161,8 @@ namespace backend.Service.Implementations
             if (current.RevokedAt != null)
                 return await HandleRotatedTokenAsync(current, user, now);
 
-            var newToken = GenerateRefreshToken();
-            var newTokenHash = HashRefreshToken(newToken);
+            var newToken = GenerateSecureToken();
+            var newTokenHash = HashToken(newToken);
 
             await using var tx = await _db.Database.BeginTransactionAsync();
 
@@ -275,7 +284,7 @@ namespace backend.Service.Implementations
         {
             if (string.IsNullOrWhiteSpace(refreshToken)) return false;
 
-            var tokenHash = HashRefreshToken(refreshToken);
+            var tokenHash = HashToken(refreshToken);
             var refresh = await _db.RefreshTokens
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Token == tokenHash);
@@ -283,6 +292,64 @@ namespace backend.Service.Implementations
 
             await DeleteFamilyAsync(refresh.FamilyId);
             return true;
+        }
+
+        private static string ResetTokenKey(string tokenHash) => $"password-reset:token:{tokenHash}";
+        private static string ResetUserKey(long userId) => $"password-reset:user:{userId}";
+        private static string ResetCooldownKey(string email) => $"password-reset:cooldown:{email}";
+
+        public async Task ForgotPasswordAsync(ForgotPasswordDto dto)
+        {
+            var email = dto.Email!.Trim().ToLowerInvariant();
+
+            // Giới hạn theo email (kể cả email không tồn tại) để không lộ email nào đã đăng ký
+            if (!await _redis.StringSetAsync(ResetCooldownKey(email), 1, _resetRequestCooldown, When.NotExists))
+                throw new BadRequestException($"Vui lòng đợi {_resetRequestCooldown.TotalSeconds} giây trước khi gửi lại yêu cầu.");
+
+            var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.email == email);
+            if (user == null) return;
+
+            var token = GenerateSecureToken(32);
+            var tokenHash = HashToken(token);
+
+            var userKey = ResetUserKey(user.id);
+            var previousHash = await _redis.StringGetAsync(userKey);
+            if (!previousHash.IsNullOrEmpty)
+                await _redis.KeyDeleteAsync(ResetTokenKey(previousHash!));
+
+            await _redis.StringSetAsync(ResetTokenKey(tokenHash), user.id, _resetTokenLifetime);
+            await _redis.StringSetAsync(userKey, tokenHash, _resetTokenLifetime);
+
+            var frontendUrl = (Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:4200").TrimEnd('/');
+            var resetLink = $"{frontendUrl}/reset-password?token={token}";
+
+            await _email.SendAsync(user.email!, "Đặt lại mật khẩu", $"""
+                <p>Xin chào <b>{WebUtility.HtmlEncode(user.username)}</b>,</p>
+                <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn. Bấm vào nút dưới đây để đặt mật khẩu mới:</p>
+                <p><a href="{resetLink}" style="display:inline-block;padding:12px 24px;background:#258dcf;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">Đặt lại mật khẩu</a></p>
+                <p>Liên kết có hiệu lực trong {_resetTokenLifetime.TotalMinutes} phút và chỉ dùng được một lần.</p>
+                <p>Nếu bạn không yêu cầu đặt lại mật khẩu, hãy bỏ qua email này.</p>
+                """);
+        }
+
+        public async Task ResetPasswordAsync(ResetPasswordDto dto)
+        {
+            var invalidToken = new BadRequestException("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+
+            var tokenKey = ResetTokenKey(HashToken(dto.Token!));
+            var userIdValue = await _redis.StringGetAsync(tokenKey);
+
+            if (userIdValue.IsNullOrEmpty || !await _redis.KeyDeleteAsync(tokenKey))
+                throw invalidToken;
+
+            var userId = (long)userIdValue;
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.id == userId) ?? throw invalidToken;
+
+            user.password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _db.SaveChangesAsync();
+
+            await _redis.KeyDeleteAsync(ResetUserKey(userId));
+            await _db.RefreshTokens.Where(r => r.UserId == userId).ExecuteDeleteAsync();
         }
 
     }

@@ -10,6 +10,8 @@ import TheaterPage from "@/pages/admin/Theater/Theater";
 import Showtime from "@/pages/admin/Showtime/Showtime";
 import HomePage from "@/pages/home/Home/Home";
 import Auth from "@/pages/auth/Auth.tsx";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
+import ResetPassword from "@/pages/auth/ResetPassword";
 import MovieDetailPage from "@/pages/home/MovieDetail/MovieDetail";
 import BookingPage from "@/pages/home/Booking/Booking";
 import ReservationPage from "@/pages/admin/Reservation/Reservation";
@@ -31,6 +33,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/" element={<HomePage />} />
         <Route element={<GuestRoute />}>
           <Route path="/login" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
 
         <Route path="/movie/:id" element={<MovieDetailPage />} />

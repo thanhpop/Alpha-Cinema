@@ -11,7 +11,7 @@ import {
   faGenderless,
 } from "@fortawesome/free-solid-svg-icons";
 import { message, Tabs, Input, Button, DatePicker, Select } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/authService";
@@ -201,6 +201,14 @@ const Auth: React.FC = () => {
                   value={loginForm.password}
                   onChange={handleLoginChange}
                 />
+                <div className="text-right mt-2">
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm font-medium !text-[#03599d] hover:underline"
+                  >
+                    Quên mật khẩu?
+                  </Link>
+                </div>
               </div>
 
               <div className="mt-4">

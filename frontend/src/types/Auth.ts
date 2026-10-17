@@ -14,6 +14,12 @@ export interface RegisterPayload {
   role: string[];
 }
 
+export interface ResetPasswordPayload {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   userId: number;

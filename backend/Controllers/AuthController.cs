@@ -22,7 +22,11 @@ namespace backend.Controller
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
             await _auth.RegisterAsync(dto);
-            return Ok(ApiResponse<RegisterDto>.Success(dto));
+            return Ok(ApiResponse<RegisterResponseDto>.Success(new RegisterResponseDto
+            {
+                Username = dto.Username,
+                Email = dto.Email
+            }));
         }
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -64,6 +68,21 @@ namespace backend.Controller
 
             Response.Cookies.Delete(RefreshCookieName, RefreshCookieOptions());
             return NoContent();
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            await _auth.ForgotPasswordAsync(dto);
+            return Ok(ApiResponse<object>.Success(null,
+                "Nếu email đã được đăng ký, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra hộp thư."));
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            await _auth.ResetPasswordAsync(dto);
+            return Ok(ApiResponse<object>.Success(null, "Đặt lại mật khẩu thành công, vui lòng đăng nhập lại."));
         }
 
         private const string RefreshCookieName = "refreshToken";

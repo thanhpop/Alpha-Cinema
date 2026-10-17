@@ -18,6 +18,7 @@ import movieService from "@/services/movieService";
 import type { Banner } from "@/types/Banner";
 import type { Movie } from "@/types/Movie";
 import { bannerService } from "@/services/bannerService";
+import ShowtimeSchedule from "@/components/ShowtimeSchedule";
 
 const { Content } = Layout;
 const { Meta } = Card;
@@ -57,6 +58,7 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
 }) => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const handleDetailClick = () => {
     navigate(`/movie/${movie.id}`);
   };
@@ -84,8 +86,8 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
                 type="primary"
                 shape="round"
                 icon={<PlayCircleOutlined />}
-                onClick={
-                  isComingSoon ? () => setIsModalOpen(true) : handleDetailClick
+                onClick={() =>
+                  isComingSoon ? setIsModalOpen(true) : setIsScheduleOpen(true)
                 }
                 className="opacity-0 group-hover:opacity-100 bg-blue-600 border-blue-600 hover:!bg-blue-500 hover:!border-blue-500 font-bold shadow-lg min-w-[140px] transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
               >
@@ -151,6 +153,21 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
             allowFullScreen
           />
         </div>
+      </Modal>
+      <Modal
+        title={
+          <span className="text-xl font-bold uppercase">
+            Lịch chiếu - {movie.title}
+          </span>
+        }
+        open={isScheduleOpen}
+        onCancel={() => setIsScheduleOpen(false)}
+        footer={null}
+        width={960}
+        centered
+        destroyOnHidden
+      >
+        <ShowtimeSchedule movieId={movie.id} />
       </Modal>
     </Card>
   );

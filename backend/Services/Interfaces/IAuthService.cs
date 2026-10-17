@@ -8,5 +8,7 @@ namespace backend.Service.Interfaces
         Task<JwtResponseDto> LoginAsync(LoginDto dto);
         Task<bool> RevokeRefreshTokenAsync(string refreshToken);
         Task<RefreshTokenResponseDto?> RefreshTokenAsync(string refreshToken);
+        Task ForgotPasswordAsync(ForgotPasswordDto dto);
+        Task ResetPasswordAsync(ResetPasswordDto dto);
     }
 }
