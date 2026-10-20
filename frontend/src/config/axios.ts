@@ -73,19 +73,21 @@ instance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Access token hết hạn: refresh một lần rồi gửi lại request.
-    // 401 từ /auth (vd. sai mật khẩu) là lỗi thật, không refresh
+   
+    const isAuthUrl =
+      originalRequest?.url?.startsWith('/auth/') &&
+      originalRequest.url !== '/auth/change-password';
     if (
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      !originalRequest.url?.startsWith('/auth/') &&
+      !isAuthUrl &&
       hasSession()
     ) {
       originalRequest._retry = true;
 
       try {
-        // Request khác đã refresh xong trong lúc request này chạy: dùng luôn token mới, không rotate thêm
+       
         const current = tokenStore.get();
         const token =
           current && originalRequest.headers.Authorization !== `Bearer ${current}`

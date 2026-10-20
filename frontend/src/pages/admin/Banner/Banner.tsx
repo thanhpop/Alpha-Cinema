@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Table, Button, Form, Space, message, Popconfirm } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Table, Form, message } from "antd";
 
 import AddButton from "@/components/AddButton";
+import TableActions from "@/components/TableActions";
 import type { ColumnsType } from "antd/es/table";
 import type { Banner } from "@/types/Banner";
 import { bannerService } from "@/services/bannerService";
@@ -82,32 +82,22 @@ export default function BannerPage() {
     },
     {
       title: "Hành động",
+      width: 120,
+      align: "center",
       render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            style={{ color: "#52c41a" }}
-            onClick={() => {
-              setEditing(record);
-              form.setFieldsValue(record);
-              setOpen(true);
-            }}
-          />
-
-          <Popconfirm
-            title="Xóa banner này?"
-            okText="Xóa"
-            cancelText="Hủy"
-            onConfirm={async () => {
-              await bannerService.delete(record.id);
-              message.success("Đã xóa banner");
-              fetchBanners();
-            }}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
+        <TableActions
+          onEdit={() => {
+            setEditing(record);
+            form.setFieldsValue(record);
+            setOpen(true);
+          }}
+          onDelete={async () => {
+            await bannerService.delete(record.id);
+            message.success("Đã xóa banner");
+            fetchBanners();
+          }}
+          deleteTitle="Xóa banner này?"
+        />
       ),
     },
   ];

@@ -183,7 +183,7 @@ const AdminDashboard: React.FC = () => {
   }, [data]);
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className=" mx-auto">
         <div className="mb-8 ">
           <Title level={3} className="!m-0">

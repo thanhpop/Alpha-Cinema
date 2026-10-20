@@ -10,7 +10,6 @@ using backend.Model;
 using backend.Service.Interfaces;
 using backend.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 using System.Reflection.Metadata.Ecma335;
 using System.Security.Cryptography.X509Certificates;
 
@@ -62,18 +61,8 @@ namespace backend.Services.Implementations
 
             if (query.Keyword is { } kw)
             {
-                // Nhập đúng ngày (dd/MM/yyyy hoặc yyyy-MM-dd) thì lọc theo ngày chiếu, còn lại tìm theo tên phim / rạp
-                if (DateTime.TryParseExact(kw, new[] { "dd/MM/yyyy", "yyyy-MM-dd" },
-                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-                {
-                    var d = date.Date;
-                    q = q.Where(s => s.ShowDate == d);
-                }
-                else
-                {
-                    q = q.Where(s => (s.Movie.title != null && s.Movie.title.Contains(kw)) ||
-                                     (s.Theater.name != null && s.Theater.name.Contains(kw)));
-                }
+                q = q.Where(s => (s.Movie.title != null && s.Movie.title.Contains(kw)) ||
+                                 (s.Theater.name != null && s.Theater.name.Contains(kw)));
             }
 
             // Danh sách admin không cần chi tiết từng ghế

@@ -10,7 +10,7 @@ import {
   InputNumber,
   Select,
 } from "antd";
-import { EyeOutlined } from "@ant-design/icons";
+import TableActions from "@/components/TableActions";
 import type { ColumnsType } from "antd/es/table";
 import { reservationService } from "@/services/reservationService";
 import type {
@@ -131,21 +131,17 @@ export default function ReservationPage() {
       title: "Hành động",
       key: "action",
       width: 100,
+      align: "center",
       render: (_, record) => (
-        <EyeOutlined
-          style={{ fontSize: 18, cursor: "pointer", color: "#1677ff" }}
-          onClick={() => handleViewDetail(record)}
+        <TableActions
+          onView={() => handleViewDetail(record)}
         />
       ),
     },
   ];
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-      }}
-    >
+    <div>
       <Title level={3} style={{ marginBottom: 24 }}>
         Quản lý đơn đặt vé
       </Title>

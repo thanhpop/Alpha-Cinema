@@ -40,7 +40,7 @@ const ForgotPassword: React.FC = () => {
     try {
       const msg = await authService.forgotPassword(trimmedEmail);
       setSentMessage(
-        msg || "Đã gửi hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra hộp thư."
+        msg || "Đã gửi hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra hộp thư.",
       );
     } catch (err) {
       message.error(getErrorMessage(err, "Gửi yêu cầu thất bại"));
@@ -73,8 +73,7 @@ const ForgotPassword: React.FC = () => {
           </h1>
           {!sentMessage && (
             <p className="text-gray-500">
-              Nhập email bạn đã dùng để đăng ký, chúng tôi sẽ gửi hướng dẫn đặt
-              lại mật khẩu cho bạn.
+              Hệ thống sẽ gửi hướng dẫn đổi mật khẩu vào email bạn cung cấp.
             </p>
           )}
         </div>

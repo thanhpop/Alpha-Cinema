@@ -3,6 +3,7 @@ import type {
   LoginPayload,
   RegisterPayload,
   ResetPasswordPayload,
+  ChangePasswordPayload,
   AuthResponse,
 } from "@/types/Auth";
 
@@ -46,6 +47,11 @@ export const authService = {
 
   async resetPassword(payload: ResetPasswordPayload): Promise<string> {
     const res = await instance.post("/auth/reset-password", payload);
+    return String(res.data?.message ?? "");
+  },
+
+  async changePassword(payload: ChangePasswordPayload): Promise<string> {
+    const res = await instance.post("/auth/change-password", payload);
     return String(res.data?.message ?? "");
   },
 };

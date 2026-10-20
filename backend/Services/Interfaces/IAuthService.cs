@@ -10,5 +10,6 @@ namespace backend.Service.Interfaces
         Task<RefreshTokenResponseDto?> RefreshTokenAsync(string refreshToken);
         Task ForgotPasswordAsync(ForgotPasswordDto dto);
         Task ResetPasswordAsync(ResetPasswordDto dto);
+        Task ChangePasswordAsync(long userId, ChangePasswordDto dto, string? currentRefreshToken);
     }
 }

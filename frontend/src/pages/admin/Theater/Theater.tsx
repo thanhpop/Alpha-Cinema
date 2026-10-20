@@ -1,23 +1,17 @@
 import React, { useState } from "react";
 import {
   Table,
-  Button,
   Input,
   Space,
   Form,
   Row,
   Col,
   Typography,
-  Popconfirm,
   message,
   Spin,
 } from "antd";
-import {
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-} from "@ant-design/icons";
 import AddButton from "@/components/AddButton";
+import TableActions from "@/components/TableActions";
 import type { ColumnsType } from "antd/es/table";
 import type { Theater } from "@/types/Theater";
 import theaterService from "@/services/theaterService";
@@ -127,7 +121,6 @@ const AdminTheaterPage: React.FC = () => {
   };
 
   const columns: ColumnsType<Theater> = [
-    { title: "ID", dataIndex: "id", key: "id", width: 100 },
     { title: "Tên rạp", dataIndex: "name", key: "name" },
     { title: "Địa điểm", dataIndex: "location", key: "location" },
     {
@@ -139,33 +132,15 @@ const AdminTheaterPage: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
-      width: 180,
-      render: (_text, record) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EyeOutlined style={{ color: "#1890ff", fontSize: 18 }} />}
-            onClick={() => openViewModal(record)}
-          />
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: "#52c41a", fontSize: 18 }} />}
-            onClick={() => openEditModal(record)}
-          />
-          <Popconfirm
-            title={`Xóa rạp "${record.name}"?`}
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button
-              type="text"
-              icon={
-                <DeleteOutlined style={{ color: "#ff4d4f", fontSize: 18 }} />
-              }
-            />
-          </Popconfirm>
-        </Space>
+      width: 150,
+      align: "center",
+      render: (_, record) => (
+        <TableActions
+          onView={() => openViewModal(record)}
+          onEdit={() => openEditModal(record)}
+          onDelete={() => handleDelete(record.id)}
+          deleteTitle={`Xóa rạp "${record.name}"?`}
+        />
       ),
     },
   ];

@@ -29,6 +29,7 @@ export interface ReservationResponse {
   totalPrice: number;
   paid: boolean;
   movieName: string;
+  moviePoster: string | null;
   theaterName: string;
   seats?: SeatResponse[];
 }

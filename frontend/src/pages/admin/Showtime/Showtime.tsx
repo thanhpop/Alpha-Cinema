@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from "react";
 import {
   Table,
-  Button,
   Input,
   Space,
   Form,
   Row,
   Col,
   Typography,
-  Popconfirm,
   message,
   Spin,
 } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import AddButton from "@/components/AddButton";
+import TableActions from "@/components/TableActions";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import { movieService } from "@/services/movieService";
@@ -145,7 +143,6 @@ const AdminShowtimeHookPage: React.FC = () => {
   };
 
   const columns: ColumnsType<Showtime> = [
-    { title: "ID", dataIndex: "id", width: 70 },
     {
       title: "Poster",
       key: "poster",
@@ -207,24 +204,14 @@ const AdminShowtimeHookPage: React.FC = () => {
     },
     {
       title: "Hành động",
-      width: 150,
+      width: 120,
+      align: "center",
       render: (_, r) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: "#52c41a" }} />}
-            onClick={() => openEditModal(r)}
-          />
-          <Popconfirm
-            title="Xóa lịch chiếu?"
-            onConfirm={() => handleDelete(r.id)}
-          >
-            <Button
-              type="text"
-              icon={<DeleteOutlined style={{ color: "#ff4d4f" }} />}
-            />
-          </Popconfirm>
-        </Space>
+        <TableActions
+          onEdit={() => openEditModal(r)}
+          onDelete={() => handleDelete(r.id)}
+          deleteTitle="Xóa lịch chiếu?"
+        />
       ),
     },
   ];
@@ -237,7 +224,7 @@ const AdminShowtimeHookPage: React.FC = () => {
         <Row style={{ width: "100%" }} align="middle" gutter={12}>
           <Col>
             <Input.Search
-              placeholder="Tên phim, rạp hoặc ngày (dd/MM/yyyy)"
+              placeholder="Tên phim hoặc rạp"
               allowClear
               onSearch={(v) => setFilters({ search: v })}
               enterButton

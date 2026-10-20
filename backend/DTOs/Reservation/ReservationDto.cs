@@ -35,6 +35,7 @@ namespace backend.DTO.Reservation
         public bool Paid { get; set; }
 
         public string? MovieName { get; set; }
+        public string? MoviePoster { get; set; }
         public string? TheaterName { get; set; }
         public List<SeatDto> Seats { get; set; } = new List<SeatDto>();
     }

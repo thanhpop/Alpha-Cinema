@@ -161,7 +161,15 @@ const AdminLayout: React.FC = () => {
       </Sider>
 
       <Layout style={{ marginLeft: siderWidth, marginTop: headerHeight }}>
-        <Content style={{ margin: 20 }}>
+        <Content
+          style={{
+            margin: 20,
+            padding: 24,
+            background: "#fff",
+            borderRadius: 8,
+            minHeight: `calc(100vh - ${headerHeight + 40}px)`,
+          }}
+        >
           <Outlet />
         </Content>
       </Layout>

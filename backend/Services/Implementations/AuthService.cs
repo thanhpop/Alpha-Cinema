@@ -352,5 +352,31 @@ namespace backend.Service.Implementations
             await _db.RefreshTokens.Where(r => r.UserId == userId).ExecuteDeleteAsync();
         }
 
+        public async Task ChangePasswordAsync(long userId, ChangePasswordDto dto, string? currentRefreshToken)
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.id == userId)
+                ?? throw new NotFoundException("Không tìm thấy người dùng.");
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.password ?? string.Empty))
+                throw new BadRequestException("Mật khẩu hiện tại không đúng.");
+
+            user.password = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _db.SaveChangesAsync();
+
+            string? currentFamilyId = null;
+            if (!string.IsNullOrWhiteSpace(currentRefreshToken))
+            {
+                var tokenHash = HashToken(currentRefreshToken);
+                currentFamilyId = await _db.RefreshTokens
+                    .Where(r => r.Token == tokenHash && r.UserId == userId)
+                    .Select(r => r.FamilyId)
+                    .FirstOrDefaultAsync();
+            }
+
+            await _db.RefreshTokens
+                .Where(r => r.UserId == userId && r.FamilyId != currentFamilyId)
+                .ExecuteDeleteAsync();
+        }
+
     }
 }

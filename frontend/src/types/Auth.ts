@@ -20,6 +20,12 @@ export interface ResetPasswordPayload {
   confirmPassword: string;
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   userId: number;

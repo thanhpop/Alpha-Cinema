@@ -2,6 +2,7 @@
 using backend.Helpers;
 using backend.Service.Implementations;
 using backend.Service.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controller
@@ -83,6 +84,14 @@ namespace backend.Controller
         {
             await _auth.ResetPasswordAsync(dto);
             return Ok(ApiResponse<object>.Success(null, "Đặt lại mật khẩu thành công, vui lòng đăng nhập lại."));
+        }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            await _auth.ChangePasswordAsync(User.GetRequiredUserId(), dto, Request.Cookies[RefreshCookieName]);
+            return Ok(ApiResponse<object>.Success(null, "Đổi mật khẩu thành công."));
         }
 
         private const string RefreshCookieName = "refreshToken";

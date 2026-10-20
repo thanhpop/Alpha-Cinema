@@ -5,19 +5,12 @@ import {
   Spin,
   message,
   Input,
-  Button,
-  Space,
-  Popconfirm,
   Form,
 } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import TableActions from "@/components/TableActions";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
-import {
-  userService,
-  GENDER_OPTIONS,
-  type User,
-} from "@/services/userService";
+import { userService, GENDER_OPTIONS, type User } from "@/services/userService";
 import { usePagedList } from "@/hooks/usePagedList";
 import { useAuth } from "@/context/AuthContext";
 import { getErrorMessage } from "@/utils/getErrorMessage";
@@ -33,22 +26,27 @@ const genderLabel = (value: User["gender"]) =>
 
 const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuth();
-  const { items: users, loading, setFilters, reload, pagination } = usePagedList(
-    userService.getPaged,
-    {
-      initialFilters: { search: "" },
-      initialPageSize: 5,
-      onError: () => message.error("Không thể tải danh sách người dùng"),
-    },
-  );
+  const {
+    items: users,
+    loading,
+    setFilters,
+    reload,
+    pagination,
+  } = usePagedList(userService.getPaged, {
+    initialFilters: { search: "" },
+    initialPageSize: 5,
+    onError: () => message.error("Không thể tải danh sách người dùng"),
+  });
   const [searchText, setSearchText] = useState("");
   const [editing, setEditing] = useState<User | null>(null);
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<UserFormValues>();
 
-  // Tìm khi đang gõ nhưng đợi dừng gõ mới gọi API
   useEffect(() => {
-    const timer = setTimeout(() => setFilters({ search: searchText.trim() }), 400);
+    const timer = setTimeout(
+      () => setFilters({ search: searchText.trim() }),
+      400,
+    );
     return () => clearTimeout(timer);
   }, [searchText, setFilters]);
 
@@ -103,12 +101,6 @@ const UserManagementPage: React.FC = () => {
 
   const columns: ColumnsType<User> = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-    },
-    {
       title: "Username",
       dataIndex: "username",
       key: "username",
@@ -142,28 +134,14 @@ const UserManagementPage: React.FC = () => {
       title: "Hành động",
       key: "action",
       width: 120,
+      align: "center",
       render: (_, record) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: "#52c41a", fontSize: 18 }} />}
-            onClick={() => openEditModal(record)}
-          />
-          <Popconfirm
-            title={`Xóa người dùng "${record.username}"?`}
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            disabled={record.id === currentUser?.userId}
-          >
-            <Button
-              type="text"
-              disabled={record.id === currentUser?.userId}
-              icon={<DeleteOutlined style={{ fontSize: 18 }} />}
-              danger
-            />
-          </Popconfirm>
-        </Space>
+        <TableActions
+          onEdit={() => openEditModal(record)}
+          onDelete={() => handleDelete(record.id)}
+          deleteTitle={`Xóa người dùng "${record.username}"?`}
+          deleteDisabled={record.id === currentUser?.userId}
+        />
       ),
     },
   ];

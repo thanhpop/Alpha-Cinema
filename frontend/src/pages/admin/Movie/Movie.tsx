@@ -1,24 +1,18 @@
 import React, { useState } from "react";
 import {
   Table,
-  Button,
   Input,
   Space,
   Form,
   Row,
   Col,
   Typography,
-  Popconfirm,
   Tag,
   message,
   Spin,
 } from "antd";
-import {
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-} from "@ant-design/icons";
 import AddButton from "@/components/AddButton";
+import TableActions from "@/components/TableActions";
 import type { ColumnsType } from "antd/es/table";
 import moment from "moment";
 import axios from "axios";
@@ -337,12 +331,6 @@ const MoviePage: React.FC = () => {
 
   const columns: ColumnsType<Movie> = [
     {
-      title: "STT",
-      key: "index",
-      width: 80,
-      render: (_v, _r, index) => rowNumber(index),
-    },
-    {
       title: "Poster",
       dataIndex: "poster",
       key: "poster",
@@ -383,32 +371,15 @@ const MoviePage: React.FC = () => {
     {
       title: "Hành động",
       key: "action",
-      render: (_text, record) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EyeOutlined style={{ color: "#1890ff", fontSize: 20 }} />}
-            onClick={() => openViewModal(record)}
-          />
-          <Button
-            type="text"
-            icon={<EditOutlined style={{ color: "#52c41a", fontSize: 20 }} />}
-            onClick={() => openEditModal(record)}
-          />
-          <Popconfirm
-            title={`Xóa phim "${record.title}"?`}
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Button
-              type="text"
-              icon={
-                <DeleteOutlined style={{ color: "#ff4d4f", fontSize: 20 }} />
-              }
-            />
-          </Popconfirm>
-        </Space>
+      width: 150,
+      align: "center",
+      render: (_, record) => (
+        <TableActions
+          onView={() => openViewModal(record)}
+          onEdit={() => openEditModal(record)}
+          onDelete={() => handleDelete(record.id)}
+          deleteTitle={`Xóa phim "${record.title}"?`}
+        />
       ),
     },
   ];

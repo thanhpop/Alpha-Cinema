@@ -1,17 +1,14 @@
 import { useState } from "react";
 import {
   Table,
-  Button,
-  Space,
   Tag,
-  Popconfirm,
   message,
   Typography,
   Image,
   Form,
 } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import AddButton from "@/components/AddButton";
+import TableActions from "@/components/TableActions";
 import type { ColumnsType } from "antd/es/table";
 import { articleService } from "@/services/ArticleService";
 import type { Article } from "@/types/Article";
@@ -133,22 +130,14 @@ export default function ArticleManagementPage() {
     },
     {
       title: "Hành động",
-      width: 140,
+      width: 120,
+      align: "center",
       render: (_, record) => (
-        <Space>
-          <Button
-            icon={<EditOutlined />}
-            type="primary"
-            ghost
-            onClick={() => openEdit(record)}
-          />
-          <Popconfirm
-            title="Xóa bài viết?"
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
+        <TableActions
+          onEdit={() => openEdit(record)}
+          onDelete={() => handleDelete(record.id)}
+          deleteTitle="Xóa bài viết?"
+        />
       ),
     },
   ];

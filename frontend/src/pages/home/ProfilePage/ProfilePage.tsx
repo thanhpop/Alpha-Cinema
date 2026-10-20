@@ -25,6 +25,7 @@ import {
   SaveOutlined,
   DollarOutlined,
   PhoneOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import type { TabsProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -36,6 +37,8 @@ import {
   PHONE_PATTERN,
 } from "@/services/userService";
 import type { Gender, UserProfile } from "@/services/userService";
+import { authService } from "@/services/authService";
+import type { ChangePasswordPayload } from "@/types/Auth";
 import { getErrorMessage } from "@/utils/getErrorMessage";
 
 import { reservationService } from "@/services/reservationService";
@@ -56,6 +59,11 @@ interface ProfileFormValues {
   dateOfBirth?: Dayjs | null;
 }
 
+const PASSWORD_MIN_LENGTH = 6;
+const PASSWORD_MAX_LENGTH = 100;
+const POSTER_FALLBACK =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='72'><rect width='100%' height='100%' fill='%23e6e6e6'/></svg>";
+
 const toFormValues = (u: UserProfile): ProfileFormValues => ({
   username: u.username,
   email: u.email,
@@ -67,6 +75,7 @@ const toFormValues = (u: UserProfile): ProfileFormValues => ({
 interface BookingHistory {
   key: string;
   movieName: string;
+  moviePoster: string | null;
   bookingDate: string;
   showDate: string;
   theater: string;
@@ -79,6 +88,8 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [passwordForm] = Form.useForm<ChangePasswordPayload>();
+  const [changingPassword, setChangingPassword] = useState(false);
   const {
     items: reservations,
     loading: historyLoading,
@@ -142,12 +153,26 @@ const ProfilePage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const onFinishChangePassword = async (values: ChangePasswordPayload) => {
+    setChangingPassword(true);
+    try {
+      const msg = await authService.changePassword(values);
+      message.success(msg || "Đổi mật khẩu thành công!");
+      passwordForm.resetFields();
+    } catch (err) {
+      message.error(getErrorMessage(err, "Đổi mật khẩu thất bại"));
+    } finally {
+      setChangingPassword(false);
+    }
+  };
   const mapReservationToHistory = (
     reservations: ReservationResponse[],
   ): BookingHistory[] => {
     return reservations.map((r) => ({
       key: r.id,
       movieName: r.movieName,
+      moviePoster: r.moviePoster,
       // Backend đã format sẵn, chỉ hiển thị.
       bookingDate: r.reservationTime,
       showDate: r.showDateTimeText ?? "-",
@@ -170,7 +195,19 @@ const ProfilePage: React.FC = () => {
       title: "Phim",
       dataIndex: "movieName",
       key: "movieName",
-      render: (text) => <span className="font-bold text-blue-600">{text}</span>,
+      render: (text, record) => (
+        <div className="flex items-center gap-3">
+          <img
+            src={record.moviePoster || POSTER_FALLBACK}
+            alt={text}
+            className="w-12 h-[72px] object-cover rounded shrink-0"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = POSTER_FALLBACK;
+            }}
+          />
+          <span className="font-bold text-blue-600">{text}</span>
+        </div>
+      ),
     },
     {
       title: "Ngày chiếu",
@@ -322,6 +359,95 @@ const ProfilePage: React.FC = () => {
             pagination={pagination}
           />
         </>
+      ),
+    },
+    {
+      key: "3",
+      label: (
+        <span>
+          <LockOutlined className="mr-2" />
+          Đổi mật khẩu
+        </span>
+      ),
+      children: (
+        <Form<ChangePasswordPayload>
+          form={passwordForm}
+          layout="vertical"
+          onFinish={onFinishChangePassword}
+          className="max-w-md"
+        >
+          <Form.Item
+            label="Mật khẩu hiện tại"
+            name="currentPassword"
+            rules={[
+              { required: true, message: "Vui lòng nhập mật khẩu hiện tại" },
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Nhập mật khẩu hiện tại"
+              autoComplete="current-password"
+            />
+          </Form.Item>
+          <Form.Item
+            label="Mật khẩu mới"
+            name="newPassword"
+            dependencies={["currentPassword"]}
+            rules={[
+              { required: true, message: "Vui lòng nhập mật khẩu mới" },
+              {
+                min: PASSWORD_MIN_LENGTH,
+                max: PASSWORD_MAX_LENGTH,
+                message: `Mật khẩu phải từ ${PASSWORD_MIN_LENGTH} đến ${PASSWORD_MAX_LENGTH} ký tự`,
+              },
+              ({ getFieldValue }) => ({
+                validator: (_, value) =>
+                  value && value === getFieldValue("currentPassword")
+                    ? Promise.reject(
+                        new Error("Mật khẩu mới phải khác mật khẩu hiện tại"),
+                      )
+                    : Promise.resolve(),
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Nhập mật khẩu mới"
+              autoComplete="new-password"
+              maxLength={PASSWORD_MAX_LENGTH}
+            />
+          </Form.Item>
+          <Form.Item
+            label="Nhập lại mật khẩu mới"
+            name="confirmPassword"
+            dependencies={["newPassword"]}
+            rules={[
+              { required: true, message: "Vui lòng nhập lại mật khẩu mới" },
+              ({ getFieldValue }) => ({
+                validator: (_, value) =>
+                  !value || value === getFieldValue("newPassword")
+                    ? Promise.resolve()
+                    : Promise.reject(new Error("Mật khẩu xác nhận không khớp")),
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Nhập lại mật khẩu mới"
+              autoComplete="new-password"
+              maxLength={PASSWORD_MAX_LENGTH}
+            />
+          </Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<SaveOutlined />}
+            loading={changingPassword}
+            className="bg-blue-600"
+          >
+            Đổi mật khẩu
+          </Button>
+        </Form>
       ),
     },
   ];
