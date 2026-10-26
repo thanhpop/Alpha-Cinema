@@ -120,6 +120,11 @@ namespace backend.Migrations
                         .HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
                         .HasAnnotation("Relational:JsonPropertyName", "updatedAt");
 
+                    b.Property<string>("ageRating")
+                        .HasMaxLength(5)
+                        .HasColumnType("varchar(5)")
+                        .HasColumnName("age_rating");
+
                     b.Property<int>("duration")
                         .HasColumnType("int")
                         .HasColumnName("duration");

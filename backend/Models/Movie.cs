@@ -32,6 +32,10 @@ namespace backend.Model
 
         [Column("end_date")]
         public DateTime? endDate { get; set; }
+
+        [Column("age_rating")]
+        [MaxLength(5)]
+        public string? ageRating { get; set; }
         [Required]
 
         [Column("imdb_id")]

@@ -25,27 +25,30 @@ import AdminDashboard from "@/pages/admin/Dashboard/Dashboard";
 import MainLayout from "@/layouts/UserLayout";
 import ProtectedRoute from "@/routes/ProtectedRoute";
 import GuestRoute from "@/routes/GuestRoute";
+import UserRoute from "@/routes/UserRoute";
 
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route element={<GuestRoute />}>
-          <Route path="/login" element={<Auth />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-        </Route>
+      <Route element={<UserRoute />}>
+        <Route element={<MainLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route element={<GuestRoute />}>
+            <Route path="/login" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+          </Route>
 
-        <Route path="/movie/:id" element={<MovieDetailPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route path="/booking/:showtimeId" element={<BookingPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/movie/:id" element={<MovieDetailPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/booking/:showtimeId" element={<BookingPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+          </Route>
+          <Route path="/articles" element={<ArticlePage />} />
+          <Route path="/articles/:id" element={<ArticleDetailPage />} />
         </Route>
-        <Route path="/articles" element={<ArticlePage />} />
-        <Route path="/articles/:id" element={<ArticleDetailPage />} />
+        <Route path="/paymentResult" element={<PaymentResult />} />
       </Route>
-      <Route path="/paymentResult" element={<PaymentResult />} />
 
       <Route element={<ProtectedRoute role="ADMIN" />}>
         <Route path="/admin" element={<AdminLayout />}>

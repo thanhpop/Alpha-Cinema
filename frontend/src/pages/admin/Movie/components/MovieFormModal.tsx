@@ -10,6 +10,7 @@ import {
   Button,
 } from "antd";
 import type { FormInstance } from "antd";
+import { AGE_RATINGS, AGE_RATING_INFO } from "@/utils/ageRating";
 
 const { Option } = Select;
 
@@ -132,6 +133,20 @@ const MovieFormModal: React.FC<MovieFormModalProps> = ({
               style={{ width: "100%" }}
               placeholder="Thêm hoặc chọn thể loại"
             />
+          </Form.Item>
+
+          <Form.Item
+            label="Nhãn độ tuổi"
+            name="ageRating"
+            rules={[{ required: true, message: "Vui lòng chọn nhãn độ tuổi" }]}
+          >
+            <Select placeholder="Chọn nhãn độ tuổi">
+              {AGE_RATINGS.map((r) => (
+                <Option key={r} value={r}>
+                  {r} – {AGE_RATING_INFO[r].description}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Row gutter={16}>

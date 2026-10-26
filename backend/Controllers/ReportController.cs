@@ -1,10 +1,12 @@
 ﻿using backend.DTO.Dashboard;
 using backend.Helpers;
 using backend.Service.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controller
 {
+    [Authorize(Roles = "ADMIN")]
     [ApiController]
     [Route("api/[controller]")]
     public class ReportController : ControllerBase

@@ -1,3 +1,5 @@
+export type AgeRating = "P" | "K" | "T13" | "T16" | "T18";
+
 export interface Movie {
     id: number;
     title: string;
@@ -10,9 +12,14 @@ export interface Movie {
     poster?: string;
     endDate?: string;
     endDateIso?: string;
+    ageRating?: AgeRating;
     imdbId?: string;
     filmId?: string;
     trailer?: string;
+}
+
+export interface ShowingMovie extends Movie {
+    hasShowtimes: boolean;
 }
 
 export interface ApiMovie {

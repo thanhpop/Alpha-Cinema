@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace backend.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "ADMIN")]
     [Route("api/admin/dashboard")]
     [ApiController]
     public class DashboardController : ControllerBase

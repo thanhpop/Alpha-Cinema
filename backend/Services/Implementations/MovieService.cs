@@ -31,6 +31,30 @@ namespace backend.Services.Implementations
             return paged.Map(MapToDto);
         }
 
+        public async Task<IEnumerable<ShowingMovieDto>> GetNowShowingAsync()
+        {
+            var today = DateTimeHelper.Today;
+
+            var movies = await _db.Movies.AsNoTracking()
+                .Where(m => m.releaseDate <= today && (m.endDate == null || m.endDate >= today))
+                .OrderByDescending(m => m.releaseDate).ThenByDescending(m => m.id)
+                .ToListAsync();
+
+            return await ToShowingAsync(movies);
+        }
+
+        public async Task<IEnumerable<ShowingMovieDto>> GetComingSoonAsync()
+        {
+            var today = DateTimeHelper.Today;
+
+            var movies = await _db.Movies.AsNoTracking()
+                .Where(m => m.releaseDate > today)
+                .OrderBy(m => m.releaseDate).ThenBy(m => m.id)
+                .ToListAsync();
+
+            return await ToShowingAsync(movies);
+        }
+
         public async Task<MovieDto> GetByIdAsync(long id)
         {
             var entity = await _db.Movies.AsNoTracking()
@@ -62,6 +86,7 @@ namespace backend.Services.Implementations
             existing.language = dto.Language;
             existing.releaseDate = dto.ReleaseDate.Date;
             existing.endDate = dto.EndDate?.Date;
+            existing.ageRating = dto.AgeRating;
             existing.imdbId = dto.ImdbId;
             existing.filmId = dto.FilmId;
             existing.trailer = dto.Trailer;
@@ -80,9 +105,36 @@ namespace backend.Services.Implementations
 
         private static NotFoundException MovieNotFound() => new("Không tìm thấy phim.");
 
-        private static MovieDto MapToDto(Movie m)
+        private async Task<IEnumerable<ShowingMovieDto>> ToShowingAsync(List<Movie> movies)
         {
-            return new MovieDto
+            var now = DateTimeHelper.Now;
+            var today = now.Date;
+            var lastDate = today.AddDays(6);
+            var cutoffTime = now.TimeOfDay.Add(TimeSpan.FromMinutes(15));
+
+            var bookableMovieIds = (await _db.Showtimes.AsNoTracking()
+                .Where(s =>
+                    s.AvailableSeats > 0 &&
+                    s.ShowDate <= lastDate &&
+                    (s.ShowDate > today || (s.ShowDate == today && s.ShowTime > cutoffTime)))
+                .Select(s => s.MovieId)
+                .Distinct()
+                .ToListAsync())
+                .ToHashSet();
+
+            return movies.Select(m =>
+            {
+                var dto = MapToDto<ShowingMovieDto>(m);
+                dto.HasShowtimes = bookableMovieIds.Contains(m.id);
+                return dto;
+            });
+        }
+
+        private static MovieDto MapToDto(Movie m) => MapToDto<MovieDto>(m);
+
+        private static T MapToDto<T>(Movie m) where T : MovieDto, new()
+        {
+            return new T
             {
                 Id = m.id,
                 Title = m.title,
@@ -93,6 +145,7 @@ namespace backend.Services.Implementations
                 Language = m.language,
                 ReleaseDate = m.releaseDate,
                 EndDate = m.endDate,
+                AgeRating = m.ageRating,
                 CreatedAt = m.CreatedAt,
                 UpdatedAt = m.UpdatedAt,
                 ImdbId = m.imdbId,
@@ -113,6 +166,7 @@ namespace backend.Services.Implementations
                 language = dto.Language,
                 releaseDate = dto.ReleaseDate.Date,
                 endDate = dto.EndDate?.Date,
+                ageRating = dto.AgeRating,
                 imdbId = dto.ImdbId,
                 filmId = dto.FilmId,
                 trailer = dto.Trailer

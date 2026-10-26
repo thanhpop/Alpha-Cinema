@@ -1,9 +1,11 @@
-import React, { useMemo } from "react";
-import { Button, Layout, Menu } from "antd";
+import React, { useMemo, useState } from "react";
+import { Button, Dropdown, Layout, Menu, Modal } from "antd";
 import type { MenuProps } from "antd";
 import {
   VideoCameraOutlined,
   LogoutOutlined,
+  LockOutlined,
+  DownOutlined,
   HomeOutlined,
   CalendarOutlined,
   ProfileOutlined,
@@ -15,6 +17,7 @@ import {
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import logo from "@/assets/logo-cinema2.png";
 import { useAuth } from "@/context/AuthContext";
+import ChangePasswordForm from "@/components/ChangePasswordForm";
 
 const { Header, Sider, Content } = Layout;
 
@@ -23,6 +26,7 @@ const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
 
   const { logout } = useAuth();
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -105,11 +109,46 @@ const AdminLayout: React.FC = () => {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 16, fontWeight: "bold", color: "#fff" }}>
-            Xin chào, Admin
-          </span>
+          <Dropdown
+            trigger={["click"]}
+            menu={{
+              items: [
+                {
+                  key: "change-password",
+                  icon: <LockOutlined />,
+                  label: "Đổi mật khẩu",
+                },
+              ],
+              onClick: () => setPasswordModalOpen(true),
+            }}
+          >
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: "bold",
+                color: "#fff",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              Xin chào, Admin
+              <DownOutlined style={{ fontSize: 12 }} />
+            </span>
+          </Dropdown>
         </div>
       </Header>
+
+      <Modal
+        title="Đổi mật khẩu"
+        open={passwordModalOpen}
+        footer={null}
+        onCancel={() => setPasswordModalOpen(false)}
+        destroyOnHidden
+      >
+        <ChangePasswordForm onSuccess={() => setPasswordModalOpen(false)} />
+      </Modal>
 
       <Sider
         width={siderWidth}

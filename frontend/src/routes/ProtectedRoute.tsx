@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import ForbiddenPage from "@/pages/error/error_403";
 
 interface ProtectedRouteProps {
   role?: string;
@@ -13,7 +14,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ role }) => {
   }
 
   if (role && user.role !== role) {
-    return <Navigate replace to="/" />;
+    return <ForbiddenPage />;
   }
 
   return <Outlet />;

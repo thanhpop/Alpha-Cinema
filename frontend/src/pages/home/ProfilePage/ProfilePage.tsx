@@ -37,9 +37,8 @@ import {
   PHONE_PATTERN,
 } from "@/services/userService";
 import type { Gender, UserProfile } from "@/services/userService";
-import { authService } from "@/services/authService";
-import type { ChangePasswordPayload } from "@/types/Auth";
 import { getErrorMessage } from "@/utils/getErrorMessage";
+import ChangePasswordForm from "@/components/ChangePasswordForm";
 
 import { reservationService } from "@/services/reservationService";
 import type {
@@ -59,8 +58,6 @@ interface ProfileFormValues {
   dateOfBirth?: Dayjs | null;
 }
 
-const PASSWORD_MIN_LENGTH = 6;
-const PASSWORD_MAX_LENGTH = 100;
 const POSTER_FALLBACK =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='72'><rect width='100%' height='100%' fill='%23e6e6e6'/></svg>";
 
@@ -88,8 +85,6 @@ const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
-  const [passwordForm] = Form.useForm<ChangePasswordPayload>();
-  const [changingPassword, setChangingPassword] = useState(false);
   const {
     items: reservations,
     loading: historyLoading,
@@ -154,18 +149,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const onFinishChangePassword = async (values: ChangePasswordPayload) => {
-    setChangingPassword(true);
-    try {
-      const msg = await authService.changePassword(values);
-      message.success(msg || "Đổi mật khẩu thành công!");
-      passwordForm.resetFields();
-    } catch (err) {
-      message.error(getErrorMessage(err, "Đổi mật khẩu thất bại"));
-    } finally {
-      setChangingPassword(false);
-    }
-  };
   const mapReservationToHistory = (
     reservations: ReservationResponse[],
   ): BookingHistory[] => {
@@ -369,86 +352,7 @@ const ProfilePage: React.FC = () => {
           Đổi mật khẩu
         </span>
       ),
-      children: (
-        <Form<ChangePasswordPayload>
-          form={passwordForm}
-          layout="vertical"
-          onFinish={onFinishChangePassword}
-          className="max-w-md"
-        >
-          <Form.Item
-            label="Mật khẩu hiện tại"
-            name="currentPassword"
-            rules={[
-              { required: true, message: "Vui lòng nhập mật khẩu hiện tại" },
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Nhập mật khẩu hiện tại"
-              autoComplete="current-password"
-            />
-          </Form.Item>
-          <Form.Item
-            label="Mật khẩu mới"
-            name="newPassword"
-            dependencies={["currentPassword"]}
-            rules={[
-              { required: true, message: "Vui lòng nhập mật khẩu mới" },
-              {
-                min: PASSWORD_MIN_LENGTH,
-                max: PASSWORD_MAX_LENGTH,
-                message: `Mật khẩu phải từ ${PASSWORD_MIN_LENGTH} đến ${PASSWORD_MAX_LENGTH} ký tự`,
-              },
-              ({ getFieldValue }) => ({
-                validator: (_, value) =>
-                  value && value === getFieldValue("currentPassword")
-                    ? Promise.reject(
-                        new Error("Mật khẩu mới phải khác mật khẩu hiện tại"),
-                      )
-                    : Promise.resolve(),
-              }),
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Nhập mật khẩu mới"
-              autoComplete="new-password"
-              maxLength={PASSWORD_MAX_LENGTH}
-            />
-          </Form.Item>
-          <Form.Item
-            label="Nhập lại mật khẩu mới"
-            name="confirmPassword"
-            dependencies={["newPassword"]}
-            rules={[
-              { required: true, message: "Vui lòng nhập lại mật khẩu mới" },
-              ({ getFieldValue }) => ({
-                validator: (_, value) =>
-                  !value || value === getFieldValue("newPassword")
-                    ? Promise.resolve()
-                    : Promise.reject(new Error("Mật khẩu xác nhận không khớp")),
-              }),
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Nhập lại mật khẩu mới"
-              autoComplete="new-password"
-              maxLength={PASSWORD_MAX_LENGTH}
-            />
-          </Form.Item>
-          <Button
-            type="primary"
-            htmlType="submit"
-            icon={<SaveOutlined />}
-            loading={changingPassword}
-            className="bg-blue-600"
-          >
-            Đổi mật khẩu
-          </Button>
-        </Form>
-      ),
+      children: <ChangePasswordForm />,
     },
   ];
 

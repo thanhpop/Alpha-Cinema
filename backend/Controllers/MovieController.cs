@@ -26,7 +26,24 @@ namespace backend.Controllers
             return Ok(ApiResponse<IEnumerable<MovieDto>>.Success(data));
         }
 
+        [AllowAnonymous]
+        [HttpGet("now-showing")]
+        public async Task<IActionResult> GetNowShowing()
+        {
+            var data = await _service.GetNowShowingAsync();
+            return Ok(ApiResponse<IEnumerable<ShowingMovieDto>>.Success(data));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("coming-soon")]
+        public async Task<IActionResult> GetComingSoon()
+        {
+            var data = await _service.GetComingSoonAsync();
+            return Ok(ApiResponse<IEnumerable<ShowingMovieDto>>.Success(data));
+        }
+
         [HttpGet("paged")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
         {
             var data = await _service.GetPagedAsync(query);
@@ -41,6 +58,7 @@ namespace backend.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Create([FromBody] MovieDto dto)
         {
             var created = await _service.CreateAsync(dto);
@@ -48,6 +66,7 @@ namespace backend.Controllers
         }
 
         [HttpPut("{id:long}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Update(long id, [FromBody] MovieDto dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
@@ -55,6 +74,7 @@ namespace backend.Controllers
         }
 
         [HttpDelete("{id:long}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Delete(long id)
         {
             await _service.DeleteAsync(id);

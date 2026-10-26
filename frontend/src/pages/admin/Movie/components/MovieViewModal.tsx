@@ -1,5 +1,7 @@
 import { Modal, Form, Row, Col, Input, Tag, Button } from "antd";
 import type { FormInstance } from "antd";
+import type { AgeRating } from "@/types/Movie";
+import { AGE_RATING_INFO } from "@/utils/ageRating";
 
 interface MovieViewModalProps {
   open: boolean;
@@ -100,6 +102,16 @@ const MovieViewModal: React.FC<MovieViewModalProps> = ({
                   <Tag key={g}>{g}</Tag>
                 ))}
             </div>
+          </Form.Item>
+
+          <Form.Item label="Nhãn độ tuổi">
+            <Input
+              readOnly
+              value={(() => {
+                const r = viewForm.getFieldValue("ageRating") as AgeRating | undefined;
+                return r ? `${r} – ${AGE_RATING_INFO[r].description}` : "Chưa phân loại";
+              })()}
+            />
           </Form.Item>
 
           <Row gutter={16}>

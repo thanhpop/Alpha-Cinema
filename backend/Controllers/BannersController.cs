@@ -29,6 +29,7 @@ namespace backend.Controller
         }
 
         [HttpGet("paged")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
         {
             var data = await _service.GetPagedAsync(query);
@@ -43,6 +44,7 @@ namespace backend.Controller
         }
 
         [HttpPost]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Create(BannerDto dto)
         {
             var result = await _service.CreateAsync(dto);
@@ -50,6 +52,7 @@ namespace backend.Controller
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Update(int id, [FromBody] BannerDto dto)
         {
             var updatedBanner = await _service.UpdateAsync(id, dto);
@@ -60,6 +63,7 @@ namespace backend.Controller
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Delete(int id)
         {
             await _service.DeleteAsync(id);

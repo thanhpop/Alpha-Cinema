@@ -21,6 +21,8 @@ import {
 import movieService from "@/services/movieService";
 import type { Movie } from "@/types/Movie";
 import ShowtimeSchedule from "@/components/ShowtimeSchedule";
+import AgeRatingBadge from "@/components/AgeRatingBadge";
+import { AGE_RATING_INFO } from "@/utils/ageRating";
 
 const { Content } = Layout;
 const { Title, Paragraph } = Typography;
@@ -106,13 +108,17 @@ const MovieDetailPage: React.FC = () => {
                   {movie.title}
                 </Title>
                 <div className="flex items-center gap-6 text-gray-500 text-lg font-medium mb-4">
+                  <AgeRatingBadge
+                    rating={movie.ageRating}
+                    className="!text-base !px-2"
+                  />
                   <span>
                     <ClockCircleOutlined className="mr-2" />
                     {movie.duration} phút
                   </span>
                   <span>
                     <CalendarOutlined className="mr-2" />
-                    2025
+                    Khởi chiếu: {movie.releaseDate}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -131,6 +137,15 @@ const MovieDetailPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
+                {movie.ageRating && (
+                  <p className="mt-3 text-gray-600">
+                    <span className="font-bold text-gray-900">
+                      Phân loại:
+                    </span>{" "}
+                    {movie.ageRating} –{" "}
+                    {AGE_RATING_INFO[movie.ageRating].description}
+                  </p>
+                )}
               </div>
 
               <Paragraph className="text-gray-600 text-lg leading-relaxed max-w-3xl">

@@ -13,12 +13,12 @@ import type { TabsProps } from "antd";
 import { useNavigate } from "react-router-dom";
 
 import { useEffect } from "react";
-import { showtimeService } from "@/services/showtimeService";
 import movieService from "@/services/movieService";
 import type { Banner } from "@/types/Banner";
-import type { Movie } from "@/types/Movie";
+import type { AgeRating, ShowingMovie } from "@/types/Movie";
 import { bannerService } from "@/services/bannerService";
 import ShowtimeSchedule from "@/components/ShowtimeSchedule";
+import AgeRatingBadge from "@/components/AgeRatingBadge";
 
 const { Content } = Layout;
 const { Meta } = Card;
@@ -30,15 +30,21 @@ interface HomeMovie {
   genre: string;
   duration: string;
   trailer?: string;
+  releaseDate?: string;
+  ageRating?: AgeRating;
+  hasShowtimes: boolean;
 }
 
-const toHomeMovie = (m: Movie): HomeMovie => ({
+const toHomeMovie = (m: ShowingMovie): HomeMovie => ({
   id: m.id,
   title: m.title,
   image: m.poster || "https://placehold.co/400x600?text=No+Image",
   genre: m.genres?.join(", ") || "N/A",
   duration: m.duration ? `${m.duration} phút` : "N/A",
   trailer: m.trailer,
+  releaseDate: m.releaseDate,
+  ageRating: m.ageRating,
+  hasShowtimes: m.hasShowtimes,
 });
 
 const getEmbedUrl = (url?: string) => {
@@ -63,6 +69,12 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
     navigate(`/movie/${movie.id}`);
   };
 
+  const primaryAction = movie.hasShowtimes
+    ? { label: "Mua Vé", onClick: () => setIsScheduleOpen(true) }
+    : movie.trailer
+      ? { label: "Xem Trailer", onClick: () => setIsModalOpen(true) }
+      : null;
+
   return (
     <Card
       hoverable
@@ -80,32 +92,39 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
             }}
           />
 
+          {isComingSoon && movie.hasShowtimes && (
+            <span className="absolute top-3 left-3 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded shadow">
+              CHIẾU SỚM
+            </span>
+          )}
+
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 flex flex-col items-center justify-center gap-3 transition-all duration-300">
-            {(!isComingSoon || movie.trailer) && (
+            {primaryAction && (
               <Button
                 type="primary"
                 shape="round"
                 icon={<PlayCircleOutlined />}
-                onClick={() =>
-                  isComingSoon ? setIsModalOpen(true) : setIsScheduleOpen(true)
-                }
+                onClick={primaryAction.onClick}
                 className="opacity-0 group-hover:opacity-100 bg-blue-600 border-blue-600 hover:!bg-blue-500 hover:!border-blue-500 font-bold shadow-lg min-w-[140px] transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
               >
-                {isComingSoon ? "Xem Trailer" : "Mua Vé"}
+                {primaryAction.label}
               </Button>
             )}
 
-            {!isComingSoon && (
-              <Button
-                shape="round"
-                icon={<InfoCircleOutlined />}
-                onClick={handleDetailClick}
-                className="opacity-0 group-hover:opacity-100 bg-transparent text-white border-2 border-white hover:!bg-white hover:!text-black hover:!border-white font-bold shadow-lg min-w-[140px] transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-75"
-              >
-                Chi Tiết
-              </Button>
-            )}
+            <Button
+              shape="round"
+              icon={<InfoCircleOutlined />}
+              onClick={handleDetailClick}
+              className="opacity-0 group-hover:opacity-100 bg-transparent text-white border-2 border-white hover:!bg-white hover:!text-black hover:!border-white font-bold shadow-lg min-w-[140px] transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 delay-75"
+            >
+              Chi Tiết
+            </Button>
           </div>
+
+          <AgeRatingBadge
+            rating={movie.ageRating}
+            className="absolute top-3 right-3 shadow"
+          />
         </div>
       }
     >
@@ -124,6 +143,14 @@ const MovieCard: React.FC<{ movie: HomeMovie; isComingSoon?: boolean }> = ({
                 {movie.duration}
               </span>
             </div>
+            {isComingSoon && movie.releaseDate && (
+              <span className="text-xs text-gray-500">
+                Khởi chiếu:{" "}
+                <span className="font-semibold text-gray-700">
+                  {movie.releaseDate}
+                </span>
+              </span>
+            )}
           </div>
         }
       />
@@ -215,24 +242,13 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     const loadMovies = async () => {
       try {
-        const [availableShowtimes, upcomingShowtimes] = await Promise.all([
-          showtimeService.getAvailable(),
-          showtimeService.getUpcoming(),
+        const [nowShowingData, comingSoonData] = await Promise.all([
+          movieService.getNowShowing(),
+          movieService.getComingSoon(),
         ]);
 
-        const nowShowingIds = new Set(availableShowtimes.map((s) => s.movieId));
-        const comingSoonIds = new Set(upcomingShowtimes.map((s) => s.movieId));
-
-        if (nowShowingIds.size === 0 && comingSoonIds.size === 0) return;
-
-        const allMovies = await movieService.getMovies();
-
-        setNowShowing(
-          allMovies.filter((m) => nowShowingIds.has(m.id)).map(toHomeMovie)
-        );
-        setComingSoonMovies(
-          allMovies.filter((m) => comingSoonIds.has(m.id)).map(toHomeMovie)
-        );
+        setNowShowing(nowShowingData.map(toHomeMovie));
+        setComingSoonMovies(comingSoonData.map(toHomeMovie));
       } catch (err) {
         console.error("Load movies failed", err);
         setMoviesError(true);

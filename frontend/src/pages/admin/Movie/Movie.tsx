@@ -17,7 +17,9 @@ import type { ColumnsType } from "antd/es/table";
 import moment from "moment";
 import axios from "axios";
 import { z } from "zod";
-import type { Movie, ApiMovie } from "@/types/Movie";
+import type { Movie, ApiMovie, AgeRating } from "@/types/Movie";
+import { AGE_RATINGS } from "@/utils/ageRating";
+import AgeRatingBadge from "@/components/AgeRatingBadge";
 
 import { usePagedList } from "@/hooks/usePagedList";
 import movieService from "@/services/movieService";
@@ -43,6 +45,7 @@ const MovieSchema = z.object({
     message: "releaseDate phải là chuỗi ISO hợp lệ",
   }),
   endDate: z.string().nullable().optional(),
+  ageRating: z.enum(AGE_RATINGS, "Vui lòng chọn nhãn độ tuổi"),
   poster: z.url("Poster phải là URL hợp lệ").optional(),
   trailer: z.url("Trailer phải là URL hợp lệ").optional(),
   imdbId: z.string().optional(),
@@ -103,6 +106,7 @@ const MoviePage: React.FC = () => {
       endDate: record.endDateIso
         ? moment(record.endDateIso, "YYYY-MM-DD")
         : undefined,
+      ageRating: record.ageRating,
       poster: record.poster,
       trailer: record.trailer ?? undefined,
       imdbId: record.imdbId ?? undefined,
@@ -121,6 +125,7 @@ const MoviePage: React.FC = () => {
       language: record.language,
       releaseDate: record.releaseDate ?? "",
       endDate: record.endDate ?? "",
+      ageRating: record.ageRating,
       poster: record.poster,
       trailer: record.trailer ?? undefined,
       imdbId: record.imdbId ?? undefined,
@@ -168,6 +173,7 @@ const MoviePage: React.FC = () => {
         language: values.language,
         releaseDate: releaseIso,
         endDate: endIso,
+        ageRating: values.ageRating,
         poster: values.poster || undefined,
         trailer: values.trailer || undefined,
         imdbId: values.imdbId || undefined,
@@ -359,6 +365,13 @@ const MoviePage: React.FC = () => {
             genres.map((tag) => <Tag key={tag}>{tag}</Tag>)}
         </>
       ),
+    },
+    {
+      title: "Độ tuổi",
+      dataIndex: "ageRating",
+      key: "ageRating",
+      align: "center",
+      render: (r?: AgeRating) => (r ? <AgeRatingBadge rating={r} /> : "—"),
     },
     { title: "Thời lượng (phút)", dataIndex: "duration", key: "duration" },
     { title: "Ngôn ngữ", dataIndex: "language", key: "language" },

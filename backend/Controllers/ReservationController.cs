@@ -21,6 +21,7 @@ namespace backend.Controller
             _service = service;
         }
         [HttpGet]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetAll()
         {
             var result = await _service.GetAllAsync();
@@ -28,6 +29,7 @@ namespace backend.Controller
         }
 
         [HttpGet("paged")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetPaged([FromQuery] ReservationPagedQuery query)
         {
             var data = await _service.GetPagedAsync(query);
@@ -47,6 +49,7 @@ namespace backend.Controller
             return Ok(ApiResponse<ReservationDto>.Success(reservation));
         }
         [HttpPut("confirm/{id}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> ConfirmReservation(string id)
         {
             await _service.ConfirmReservationAsync(id);

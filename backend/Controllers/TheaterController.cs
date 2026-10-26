@@ -29,6 +29,7 @@ namespace backend.Controllers
         }
 
         [HttpGet("paged")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
         {
             var data = await _service.GetPagedAsync(query);
@@ -51,6 +52,7 @@ namespace backend.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Create([FromBody] TheaterDto dto)
         {
             var created = await _service.CreateAsync(dto);
@@ -60,6 +62,7 @@ namespace backend.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Update(long id, [FromBody] TheaterDto dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
@@ -67,6 +70,7 @@ namespace backend.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Delete(long id)
         {
             await _service.DeleteAsync(id);

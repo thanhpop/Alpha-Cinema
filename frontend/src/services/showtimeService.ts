@@ -92,31 +92,4 @@ export const showtimeService = {
     const list = res.data?.data ?? [];
     return Array.isArray(list) ? list.map(toShowtime) : [];
   },
-
-  async getByDate(date: string): Promise<Showtime[]> {
-    const res = await instance.get(`/showtimes/date/${date}`);
-    const list = res.data?.data ?? [];
-    return Array.isArray(list) ? list.map(toShowtime) : [];
-  },
-
-
-  async getAvailable(fromDate?: string): Promise<Showtime[]> {
-    const res = await instance.get("/showtimes/available", {
-      params: fromDate ? { fromDate } : undefined,
-    });
-    const list = res.data?.data ?? [];
-    return Array.isArray(list) ? list.map(toShowtime) : [];
-  },
-    async getUpcoming(): Promise<Showtime[]> {
-    const res = await instance.get("/showtimes/upcoming");
-    const list = res.data?.data ?? [];
-    return Array.isArray(list) ? list.map(toShowtime) : [];
-  },
-
-  async getUpcomingByMovie(movieId: number): Promise<Showtime[]> {
-    const res = await instance.get(`/showtimes/upcoming/movie/${movieId}`);
-    const list = res.data?.data ?? [];
-    return Array.isArray(list) ? list.map(toShowtime) : [];
-  },
-
 };

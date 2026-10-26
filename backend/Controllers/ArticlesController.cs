@@ -26,7 +26,7 @@ namespace backend.Controllers
             return Ok(ApiResponse<List<ArticlesDto>>.Success(data));
         }
 
-        [Authorize]
+        [Authorize(Roles = "ADMIN")]
         [HttpGet("paged")]
         public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
         {
@@ -47,21 +47,21 @@ namespace backend.Controllers
             var article = await _service.GetByIdAsync(id);
             return Ok(ApiResponse<ArticlesDto>.Success(article));
         }
-        [Authorize]
+        [Authorize(Roles = "ADMIN")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ArticlesDto dto)
         {
             var created = await _service.CreateAsync(dto);
             return Ok(ApiResponse<ArticlesDto>.Success(created, "Tạo bài viết thành công"));
         }
-        [Authorize]
+        [Authorize(Roles = "ADMIN")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ArticlesDto dto)
         {
             var updated = await _service.UpdateAsync(id, dto);
             return Ok(ApiResponse<ArticlesDto>.Success(updated, "Cập nhật thành công"));
         }
-        [Authorize]
+        [Authorize(Roles = "ADMIN")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

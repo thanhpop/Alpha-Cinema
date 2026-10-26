@@ -166,158 +166,9 @@ namespace backend.Services.Implementations
             });
         }
 
-        public async Task<IEnumerable<ShowtimeDto>> GetShowtimesByDateAsync(DateTime date)
-        {
-            var targetDate = date.Date;
-            var list = await _db.Showtimes
-                                .AsNoTracking()
-                                .Where(s => s.ShowDate == targetDate).Include(x => x.Seats)
-                                .OrderBy(s => s.ShowTime)
-                                .ToListAsync();
-
-            return list.Select(s => new ShowtimeDto
-            {
-                Id = s.Id,
-                MovieId = s.MovieId,
-                TheaterId = s.TheaterId,
-                ShowDate = s.ShowDate,
-                ShowTimeValue = s.ShowTime,
-                Price = s.Price,
-                TotalSeats = s.TotalSeats,
-                AvailableSeats = s.AvailableSeats,
-                Seats = s.Seats?.Select(se => new SeatDto
-                {
-                    Id = se.Id,
-                    ShowtimeId = se.ShowtimeId,
-                    SeatNumber = se.SeatNumber,
-                    IsReserved = se.IsReserved
-                }).ToList(),
-            });
-        }
-
-        public async Task<IEnumerable<ShowtimeDto>> GetAvailableShowtimesAsync(DateTime? fromDate = null)
-        {
-            var now = DateTimeHelper.Now;
-            var today = now.Date;
-
-            var cutoffTime = now.TimeOfDay.Add(TimeSpan.FromMinutes(15));
-
-            var startDate = (fromDate ?? today).Date;
-            var endDate = startDate.AddDays(6);
-
-            var list = await _db.Showtimes
-                .AsNoTracking()
-                .Where(s =>
-                        s.AvailableSeats > 0 &&
-                        s.ShowDate >= startDate &&
-                        s.ShowDate <= endDate &&
-                        (s.ShowDate > today || (s.ShowDate == today && s.ShowTime > cutoffTime))
-                )
-                .OrderBy(s => s.ShowDate)
-                .ThenBy(s => s.ShowTime)
-                .Select(s => new ShowtimeDto
-                {
-                    Id = s.Id,
-                    MovieId = s.MovieId,
-                    TheaterId = s.TheaterId,
-                    ShowDate = s.ShowDate,
-                    ShowTimeValue = s.ShowTime,
-                    Price = s.Price,
-                    TotalSeats = s.TotalSeats,
-                    AvailableSeats = s.AvailableSeats
-                })
-                .ToListAsync();
-
-            return list;
-        }
-
-        public async Task<IEnumerable<ShowtimeDto>> GetAvailableShowtimesForMovieAsync(long movieId, DateTime? fromDate = null)
-        {
-            var date = (fromDate ?? DateTimeHelper.Today).Date;
-
-            var list = await _db.Showtimes
-                .AsNoTracking()
-                .Where(s => s.MovieId == movieId && s.ShowDate >= date && s.AvailableSeats > 0).Include(x => x.Seats)
-                .OrderBy(s => s.ShowDate).ThenBy(s => s.ShowTime)
-                .Select(s => new ShowtimeDto
-                {
-                    Id = s.Id,
-                    MovieId = s.MovieId,
-                    TheaterId = s.TheaterId,
-                    ShowDate = s.ShowDate,
-                    ShowTimeValue = s.ShowTime,
-                    Price = s.Price,
-                    TotalSeats = s.TotalSeats,
-                    AvailableSeats = s.AvailableSeats,
-
-                })
-                .ToListAsync();
-
-            return list;
-        }
-
-        public async Task<IEnumerable<ShowtimeDto>> GetUpcomingShowtimesAsync()
-        {
-            var fromDate = DateTimeHelper.Today.AddDays(8);
-
-            var list = await _db.Showtimes
-                .AsNoTracking()
-                .Where(s => s.ShowDate >= fromDate)
-                .OrderBy(s => s.ShowDate)
-                .ThenBy(s => s.ShowTime)
-                .Select(s => new ShowtimeDto
-                {
-                    Id = s.Id,
-                    MovieId = s.MovieId,
-                    TheaterId = s.TheaterId,
-                    ShowDate = s.ShowDate,
-                    ShowTimeValue = s.ShowTime,
-                    Price = s.Price,
-                    TotalSeats = s.TotalSeats,
-                    AvailableSeats = s.AvailableSeats
-                })
-                .ToListAsync();
-
-            return list;
-        }
-        public async Task<IEnumerable<ShowtimeDto>> GetUpcomingShowtimesByMovieAsync(long movieId)
-        {
-            var now = DateTimeHelper.Now;
-            var today = now.Date;
-            var currentTime = now.TimeOfDay;
-
-            var list = await _db.Showtimes
-                .AsNoTracking()
-                .Where(s =>
-                    s.MovieId == movieId &&
-                    (
-                        s.ShowDate > today ||
-                        (s.ShowDate == today && s.ShowTime > currentTime)
-                    )
-                )
-                .OrderBy(s => s.ShowDate)
-                .ThenBy(s => s.ShowTime)
-                .Select(s => new ShowtimeDto
-                {
-                    Id = s.Id,
-                    MovieId = s.MovieId,
-                    TheaterId = s.TheaterId,
-                    ShowDate = s.ShowDate,
-                    ShowTimeValue = s.ShowTime,
-                    Price = s.Price,
-                    TotalSeats = s.TotalSeats,
-                    AvailableSeats = s.AvailableSeats
-                })
-                .ToListAsync();
-
-            return list;
-        }
-
-
         public async Task<ShowtimeDto> CreateAsync(ShowtimeDto dto)
         {
-            var movieExists = await _db.Movies.AnyAsync(m => m.id == dto.MovieId);
-            if (!movieExists) throw new NotFoundException("Không tìm thấy phim.");
+            await EnsureShowDateWithinRunAsync(dto.MovieId, dto.ShowDate);
 
             var theater = await _db.Theaters.FirstOrDefaultAsync(t => t.id == dto.TheaterId);
             if (theater == null) throw TheaterNotFound();
@@ -385,6 +236,8 @@ namespace backend.Services.Implementations
                                     .FirstOrDefaultAsync(s => s.Id == id)
                                     ?? throw ShowtimeNotFound();
 
+            await EnsureShowDateWithinRunAsync(dto.MovieId, dto.ShowDate);
+
             var theaterExists = await _db.Theaters.AnyAsync(t => t.id == dto.TheaterId);
             if (!theaterExists)
             {
@@ -431,6 +284,21 @@ namespace backend.Services.Implementations
             await _seatService.DeleteByShowtimeAsync(id);
             _db.Showtimes.Remove(entity);
             await _db.SaveChangesAsync();
+        }
+
+        private async Task EnsureShowDateWithinRunAsync(long movieId, DateTime showDate)
+        {
+            var movie = await _db.Movies.AsNoTracking()
+                .Where(m => m.id == movieId)
+                .Select(m => new { m.endDate })
+                .FirstOrDefaultAsync()
+                ?? throw new NotFoundException("Không tìm thấy phim.");
+
+            if (movie.endDate is { } end && showDate.Date > end.Date)
+            {
+                throw new BadRequestException(
+                    $"Ngày chiếu không được sau ngày kết thúc chiếu của phim ({DateTimeHelper.FormatDate(end)}).");
+            }
         }
 
         private static NotFoundException ShowtimeNotFound() => new("Không tìm thấy suất chiếu.");

@@ -33,6 +33,8 @@ import { seatService } from "@/services/seatService";
 import type { Seat } from "@/types/Seat";
 import { createSeatStream } from "@/services/seatStreamService";
 import { getErrorMessage } from "@/utils/getErrorMessage";
+import AgeRatingBadge from "@/components/AgeRatingBadge";
+import { AGE_RATING_INFO } from "@/utils/ageRating";
 
 const { Content } = Layout;
 const { Text, Title } = Typography;
@@ -561,6 +563,14 @@ const BookingPage: React.FC = () => {
                     <h3 className="text-xl font-black text-gray-800 line-clamp-2 mb-1">
                       {movie?.title}
                     </h3>
+                    {movie?.ageRating && (
+                      <>
+                        <AgeRatingBadge rating={movie.ageRating} />
+                        <p className="mt-2 text-xs text-gray-500">
+                          {AGE_RATING_INFO[movie.ageRating as keyof typeof AGE_RATING_INFO].description}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
 

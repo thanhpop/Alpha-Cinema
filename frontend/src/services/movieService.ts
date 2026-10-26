@@ -1,5 +1,5 @@
 import instance from '@/config/axios';
-import type { Movie } from '@/types/Movie';
+import type { Movie, ShowingMovie } from '@/types/Movie';
 import { mapPagedResult, toPagedParams, type PagedQuery, type PagedResult } from '@/types/Pagination';
 
 function normalizeGenres(m: any): string[] {
@@ -20,11 +20,16 @@ function toMovie(m: any): Movie {
         releaseDateIso: m.releaseDateIso ?? undefined,
         endDate: m.endDate ?? undefined,
         endDateIso: m.endDateIso ?? undefined,
+        ageRating: m.ageRating ?? undefined,
         poster: m.poster ?? m.poster_path,
         imdbId: m.imdbId ?? undefined,
         filmId: m.filmId ?? undefined,
         trailer: m.trailer ?? undefined,
     };
+}
+
+function toShowingMovie(m: any): ShowingMovie {
+    return { ...toMovie(m), hasShowtimes: Boolean(m.hasShowtimes) };
 }
 
 export const movieService = {
@@ -34,6 +39,14 @@ export const movieService = {
         const res = await instance.get('/movie', { params },);
         const list = res.data.data;
         return list.map(toMovie);
+    },
+    async getNowShowing(): Promise<ShowingMovie[]> {
+        const res = await instance.get('/movie/now-showing');
+        return res.data.data.map(toShowingMovie);
+    },
+    async getComingSoon(): Promise<ShowingMovie[]> {
+        const res = await instance.get('/movie/coming-soon');
+        return res.data.data.map(toShowingMovie);
     },
     async getPaged(query: PagedQuery): Promise<PagedResult<Movie>> {
         const res = await instance.get('/movie/paged', { params: toPagedParams(query) });

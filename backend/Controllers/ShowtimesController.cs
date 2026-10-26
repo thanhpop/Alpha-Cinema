@@ -31,6 +31,7 @@ namespace backend.Controllers
         }
 
         [HttpGet("paged")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetPaged([FromQuery] PagedQuery query)
         {
             var data = await _service.GetPagedAsync(query);
@@ -57,48 +58,9 @@ namespace backend.Controllers
             var items = await _service.GetByTheaterAsync(theaterId);
             return Ok(ApiResponse<IEnumerable<ShowtimeDto>>.Success(items));
         }
-        [AllowAnonymous]
-        [HttpGet("date")]
-        public async Task<IActionResult> GetByDate([FromQuery] DateTime date)
-        {
-            var items = await _service.GetShowtimesByDateAsync(date);
-            return Ok(new ApiResponse<IEnumerable<ShowtimeDto>>(200, "Success", items));
-        }
-
-        [AllowAnonymous]
-        [HttpGet("available")]
-        public async Task<IActionResult> GetAvailable([FromQuery] DateTime? date)
-        {
-            var searchDate = (date ?? DateTimeHelper.Today).Date;
-            var items = await _service.GetAvailableShowtimesAsync(searchDate);
-            return Ok(new ApiResponse<IEnumerable<ShowtimeDto>>(200, "Success", items));
-        }
-
-        [AllowAnonymous]
-        [HttpGet("available/movies/{movieId:long}")]
-        public async Task<IActionResult> GetAvailableForMovie([FromRoute] long movieId, [FromQuery] DateTime? date)
-        {
-            var searchDate = (date ?? DateTimeHelper.Today).Date;
-            var items = await _service.GetAvailableShowtimesForMovieAsync(movieId, searchDate);
-            return Ok(new ApiResponse<IEnumerable<ShowtimeDto>>(200, "Success", items));
-        }
-        [AllowAnonymous]
-        [HttpGet("upcoming")]
-        public async Task<IActionResult> GetUpcoming()
-        {
-            var items = await _service.GetUpcomingShowtimesAsync();
-            return Ok(ApiResponse<IEnumerable<ShowtimeDto>>.Success(items));
-        }
-        [AllowAnonymous]
-        [HttpGet("upcoming/movie/{movieId:long}")]
-        public async Task<IActionResult> GetUpcomingByMovie(long movieId)
-        {
-            var items = await _service.GetUpcomingShowtimesByMovieAsync(movieId);
-            return Ok(ApiResponse<IEnumerable<ShowtimeDto>>.Success(items));
-        }
 
         [HttpPost]
-        //[Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Create([FromBody] ShowtimeDto dto)
         {
               var created = await _service.CreateAsync(dto);
@@ -108,7 +70,7 @@ namespace backend.Controllers
         }
 
         [HttpPut("{id:long}")]
-        //[Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Update(long id, [FromBody] ShowtimeDto dto)
         {
 
@@ -119,7 +81,7 @@ namespace backend.Controllers
         }
 
         [HttpDelete("{id:long}")]
-        //[Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> Delete(long id)
         {
               await _service.DeleteAsync(id);

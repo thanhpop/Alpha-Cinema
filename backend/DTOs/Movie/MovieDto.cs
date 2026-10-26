@@ -37,6 +37,10 @@ namespace backend.DTO.Movie
 
         public string? EndDateIso => DateTimeHelper.FormatIsoDate(EndDate);
 
+        [Required(ErrorMessage = "Vui lòng chọn nhãn độ tuổi.")]
+        [RegularExpression("^(P|K|T13|T16|T18)$", ErrorMessage = "Nhãn độ tuổi phải là P, K, T13, T16 hoặc T18.")]
+        public string? AgeRating { get; set; }
+
         [Required(ErrorMessage = "Vui lòng nhập IMDB id.")]
         public string ImdbId { get; set; } = null!;
 
